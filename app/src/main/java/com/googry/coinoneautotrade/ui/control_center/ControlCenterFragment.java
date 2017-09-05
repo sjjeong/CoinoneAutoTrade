@@ -1,9 +1,14 @@
 package com.googry.coinoneautotrade.ui.control_center;
 
+import android.os.Bundle;
+
 import com.googry.coinoneautotrade.R;
 import com.googry.coinoneautotrade.base.ui.BaseFragment;
 import com.googry.coinoneautotrade.data.realm.AutoBotControl;
 import com.googry.coinoneautotrade.databinding.ControlCenterFragmentBinding;
+import com.googry.coinoneautotrade.util.LogUtil;
+
+import io.realm.Realm;
 
 /**
  * Created by seokjunjeong on 2017. 9. 5..
@@ -12,10 +17,16 @@ import com.googry.coinoneautotrade.databinding.ControlCenterFragmentBinding;
 public class ControlCenterFragment
         extends BaseFragment<ControlCenterFragmentBinding>
         implements ControlCenterContract.View {
-    private ControlCenterContract.Presenter mPresenter;
+    private static final String EXTRA_COIN_TYPE = "EXTRA_COIN_TYPE";
 
-    public static ControlCenterFragment newInstance(){
+    private ControlCenterContract.Presenter mPresenter;
+    private Realm mRealm;
+
+    public static ControlCenterFragment newInstance(String coinType) {
         ControlCenterFragment fragment = new ControlCenterFragment();
+        Bundle bundle = new Bundle();
+        bundle.putString(EXTRA_COIN_TYPE, coinType);
+        fragment.setArguments(bundle);
         return fragment;
     }
 
@@ -26,25 +37,17 @@ public class ControlCenterFragment
 
     @Override
     protected void initView() {
-        mBinding.setNowPrice(10l);
-        mBinding.setHoldAmount(10.0f);
-        mBinding.setFee(0.001f);
-        mBinding.setAvailableKrw(1000000.0f);
-        AutoBotControl autoBotControl = new AutoBotControl();
-        autoBotControl.bidPriceRange = 0.9f;
-        autoBotControl.buyAmount = 100f;
-        autoBotControl.sellAmout = 99f;
-        autoBotControl.coinType = AutoBotControl.XRP;
-        autoBotControl.runFlag = true;
-        autoBotControl.pricePercent = 1.015f;
-        mBinding.setControl(autoBotControl);
-
-
+        mBinding.setPresenter(mPresenter);
+        mBinding.setFragment(this);
     }
 
     @Override
     protected void newPresenter() {
-        new ControlCenterPresenter(this);
+        mRealm = Realm.getDefaultInstance();
+
+        new ControlCenterPresenter(this,
+                mRealm,
+                getArguments().getString(EXTRA_COIN_TYPE));
     }
 
     @Override
@@ -53,7 +56,41 @@ public class ControlCenterFragment
     }
 
     @Override
+    public void onDestroy() {
+        if (mRealm != null) {
+            mRealm.close();
+            mRealm = null;
+        }
+        super.onDestroy();
+    }
+
+    @Override
     public void setPresenter(ControlCenterContract.Presenter presenter) {
         mPresenter = presenter;
+    }
+
+    @Override
+    public void initData(long last, double holdAmount, double krw, AutoBotControl control) {
+        mBinding.setNowPrice(last);
+        mBinding.setHoldAmount(holdAmount);
+        mBinding.setAvailableKrw(krw);
+        mBinding.setRunning(control.runFlag);
+        mBinding.setControl(control);
+
+    }
+
+    @Override
+    public void showRunning(boolean isRun) {
+        LogUtil.i("isrun : " + isRun);
+        mBinding.setRunning(isRun);
+    }
+
+    public void prepareRun() {
+        mPresenter.requestRun(
+                Float.valueOf(mBinding.etPricePercent.getText().toString()),
+                Float.valueOf(mBinding.etBidPriceRange.getText().toString()),
+                Float.valueOf(mBinding.etBuyAmount.getText().toString()),
+                Float.valueOf(mBinding.etSellAmout.getText().toString())
+        );
     }
 }

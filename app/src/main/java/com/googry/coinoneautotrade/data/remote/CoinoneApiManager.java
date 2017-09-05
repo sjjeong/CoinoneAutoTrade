@@ -5,6 +5,8 @@ import com.googry.coinoneautotrade.data.CoinoneBalance;
 import com.googry.coinoneautotrade.data.CoinoneCompleteOrder;
 import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
 import com.googry.coinoneautotrade.data.CoinoneTicker;
+import com.googry.coinoneautotrade.data.CoinoneUserInfo;
+import com.googry.coinoneautotrade.data.UserInfo;
 
 import okhttp3.OkHttpClient;
 import okhttp3.logging.HttpLoggingInterceptor;
@@ -68,6 +70,12 @@ public class CoinoneApiManager {
 
         @POST("v2/order/complete_orders/")
         Call<CoinoneCompleteOrder> completeOrders(
+                @Header("X-COINONE-PAYLOAD") String payload,
+                @Header("X-COINONE-SIGNATURE") String signature,
+                @Body String body);
+
+        @POST("v2/account/user_info/")
+        Call<CoinoneUserInfo> userInfo(
                 @Header("X-COINONE-PAYLOAD") String payload,
                 @Header("X-COINONE-SIGNATURE") String signature,
                 @Body String body);

@@ -28,4 +28,5 @@
     <string name="hold_amount">보류량</string>
     <string name="fee">수수료</string>
     <string name="available_krw">거래가능한화</string>
+    <string name="running">가동 중</string>
 </resources>

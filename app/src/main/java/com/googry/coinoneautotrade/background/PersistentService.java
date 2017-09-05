@@ -9,17 +9,22 @@ import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.os.SystemClock;
 
+import com.googry.coinoneautotrade.Config;
 import com.googry.coinoneautotrade.data.CoinoneCompleteOrder;
 import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
 import com.googry.coinoneautotrade.data.CoinoneTicker;
 import com.googry.coinoneautotrade.data.Order;
+import com.googry.coinoneautotrade.data.realm.AutoBotControl;
 import com.googry.coinoneautotrade.data.remote.CoinoneApiManager;
 import com.googry.coinoneautotrade.util.EncryptionUtil;
 import com.googry.coinoneautotrade.util.LogUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedList;
+import java.util.Queue;
 
+import io.realm.Realm;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -30,8 +35,6 @@ import retrofit2.Response;
  */
 
 public class PersistentService extends Service {
-    private static final String ACCESS_TOKEN = "3020329f-8582-4bf7-a8b1-9c588edfc185";
-    private static final String SECRET_KEY = "0848840b-d8a0-43f6-a7a9-161577d63524";
 
     private static final int COUNT_DOWN_INTERVAL = 1000 * 3;
     private static final int MILLISINFUTURE = 86400 * 1000;
@@ -56,12 +59,14 @@ public class PersistentService extends Service {
      * Ticker
      */
     private CoinoneTicker.Ticker mTicker;
-
+    
     /**
      * prices
      */
     private ArrayList<Long> mAsks = new ArrayList<>();
     private ArrayList<Long> mBids = new ArrayList<>();
+
+    private Realm mRealm;
 
     @Override
     public void onCreate() {
@@ -75,6 +80,10 @@ public class PersistentService extends Service {
     public void onDestroy() {
         super.onDestroy();
         countDownTimer.cancel();
+        if (mRealm != null) {
+            mRealm.close();
+            mRealm = null;
+        }
 
         /**
          * 서비스 종료 시 알람 등록을 통해 서비스 재 실행
@@ -92,6 +101,7 @@ public class PersistentService extends Service {
      */
     private void initData() {
         mContext = this;
+        mRealm = Realm.getDefaultInstance();
 
         mPrivateApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
         mPublicApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePublicApi.class);
@@ -112,7 +122,9 @@ public class PersistentService extends Service {
                 /**
                  * Ticker
                  */
-                callTicker();
+                AutoBotControl control = mRealm.where(AutoBotControl.class).equalTo("coinType", mCoinType).findFirst();
+                if (control.runFlag)
+                    callTicker();
             }
 
             public void onFinish() {
@@ -153,9 +165,9 @@ public class PersistentService extends Service {
             return;
 
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(SECRET_KEY, encryptlimitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
         Call<CoinoneCompleteOrder> callCompleteOrders = mPrivateApi.completeOrders(
                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
 
@@ -174,11 +186,12 @@ public class PersistentService extends Service {
                     /**
                      * bid는 매수
                      * order.type이 bid이면 매수 채결
-                     * ask에
+                     * ask에 매도 주문
                      */
                     if ("bid".equals(order.type)) {
                         long price = Math.round(((float) order.price) * mPricePercent);
                         if (!mAsks.contains(price) && mTicker.last < price) {
+                            LogUtil.i("sell price: " + price);
                             callSellLimit(price);
                         }
                     }
@@ -212,9 +225,9 @@ public class PersistentService extends Service {
             return;
 
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(SECRET_KEY, encryptlimitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
         Call<CoinoneLimitOrder> callLimitOrders = mPrivateApi.limitOrders(
                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
 
@@ -258,13 +271,13 @@ public class PersistentService extends Service {
         if (mCallCnt++ >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
 
-        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(ACCESS_TOKEN,
+        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
                 price,
                 mBuyAmount,
                 mCoinType,
                 System.currentTimeMillis());
         String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
-        String signature = EncryptionUtil.getSignature(SECRET_KEY, encyptOrderBuyPayload);
+        String signature = EncryptionUtil.getSignature(Config.SECRET_KEY, encyptOrderBuyPayload);
 
         CoinoneApiManager.CoinonePrivateApi api =
                 CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
@@ -272,7 +285,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i(response.toString());
+                LogUtil.i("buy\n" + response.toString());
             }
 
             @Override
@@ -287,13 +300,13 @@ public class PersistentService extends Service {
         if (mCallCnt++ >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
 
-        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(ACCESS_TOKEN,
+        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
                 price,
                 mSellAmount,
                 mCoinType,
                 System.currentTimeMillis());
         String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
-        String signature = EncryptionUtil.getSignature(SECRET_KEY, encyptOrderBuyPayload);
+        String signature = EncryptionUtil.getSignature(Config.SECRET_KEY, encyptOrderBuyPayload);
 
         CoinoneApiManager.CoinonePrivateApi api =
                 CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
@@ -301,7 +314,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i(response.toString());
+                LogUtil.i("sell\n" + response.toString());
             }
 
             @Override

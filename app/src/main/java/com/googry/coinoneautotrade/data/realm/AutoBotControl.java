@@ -5,11 +5,11 @@ import io.realm.annotations.PrimaryKey;
 
 /**
  * Created by seokjunjeong on 2017. 9. 5..
- *
+ * <p>
  * 단타봇을 제어하는 모델이다.
  * coinType은 상수로 된 값으로만 설정해야함
  */
-public class AutoBotControl extends RealmObject{
+public class AutoBotControl extends RealmObject {
     /**
      * coinType들
      */
@@ -18,7 +18,7 @@ public class AutoBotControl extends RealmObject{
     public static final String ETH = "eth";
     public static final String ETC = "etc";
     public static final String XRP = "xrp";
-    public static final String QUTM = "qutm";
+    public static final String QTUM = "qtum";
     @PrimaryKey
     public String coinType;
 
@@ -45,4 +45,21 @@ public class AutoBotControl extends RealmObject{
     public float buyAmount;
     public float sellAmout;
 
+
+    public AutoBotControl(String coinType) {
+        this.coinType = coinType;
+        this.runFlag = false;
+        switch (coinType) {
+            case XRP:{
+                pricePercent = 1.015f;
+                bidPriceRange = 0.9f;
+                buyAmount = 100f;
+                sellAmout = 99f;
+            }
+            break;
+        }
+    }
+
+    public AutoBotControl() {
+    }
 }

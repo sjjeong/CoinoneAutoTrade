@@ -6,6 +6,7 @@ import android.support.v7.widget.Toolbar;
 
 import com.googry.coinoneautotrade.R;
 import com.googry.coinoneautotrade.base.ui.BaseActivity;
+import com.googry.coinoneautotrade.data.realm.AutoBotControl;
 
 /**
  * Created by seokjunjeong on 2017. 9. 5..
@@ -37,6 +38,6 @@ public class ControlCenterActivity extends BaseActivity<ControlCenterFragment> {
 
     @Override
     protected ControlCenterFragment getFragment() {
-        return ControlCenterFragment.newInstance();
+        return ControlCenterFragment.newInstance(AutoBotControl.XRP);
     }
 }
