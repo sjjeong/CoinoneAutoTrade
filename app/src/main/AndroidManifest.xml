@@ -20,6 +20,10 @@
             </intent-filter>
         </activity>
         <activity android:name=".MainActivity"/>
+        <activity
+            android:name=".ui.control_center.ControlCenterActivity"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="stateHidden|adjustResize"/>
 
         <service
             android:name=".background.PersistentService"

@@ -12,8 +12,7 @@ import android.os.SystemClock;
 import com.googry.coinoneautotrade.data.CoinoneCompleteOrder;
 import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
 import com.googry.coinoneautotrade.data.CoinoneTicker;
-import com.googry.coinoneautotrade.data.CompleteOrder;
-import com.googry.coinoneautotrade.data.LimitOrder;
+import com.googry.coinoneautotrade.data.Order;
 import com.googry.coinoneautotrade.data.remote.CoinoneApiManager;
 import com.googry.coinoneautotrade.util.EncryptionUtil;
 import com.googry.coinoneautotrade.util.LogUtil;
@@ -171,7 +170,7 @@ public class PersistentService extends Service {
 
                 LogUtil.i("complete size: " + completeOrder.completeOrders.size());
 
-                for (CompleteOrder order : completeOrder.completeOrders) {
+                for (Order order : completeOrder.completeOrders) {
                     /**
                      * bid는 매수
                      * order.type이 bid이면 매수 채결
@@ -233,7 +232,7 @@ public class PersistentService extends Service {
                 mAsks.clear();
                 mBids.clear();
 
-                for (LimitOrder order : limitOrder.limitOrders) {
+                for (Order order : limitOrder.limitOrders) {
                     if (order.type.equals("ask")) {
                         mAsks.add(order.price);
                     } else {

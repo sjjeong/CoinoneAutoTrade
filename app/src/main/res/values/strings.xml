@@ -15,4 +15,17 @@
 
     <string name="avail">거래가능</string>
     <string name="balance">보류량</string>
+    <string name="price_percent">Price Percent</string>
+    <string name="bid_price_range">Bid Price Range</string>
+    <string name="ask_price_range">Ask Price Range</string>
+    <string name="buy_amount">Buy Amount</string>
+    <string name="sell_amount">Sell Amount</string>
+    <string name="bid_clear">매수정리</string>
+    <string name="ask_clear">매도정리</string>
+    <string name="stop">정지</string>
+    <string name="run">실행</string>
+    <string name="now_price">현재가</string>
+    <string name="hold_amount">보류량</string>
+    <string name="fee">수수료</string>
+    <string name="available_krw">거래가능한화</string>
 </resources>

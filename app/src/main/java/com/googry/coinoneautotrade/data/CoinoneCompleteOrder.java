@@ -11,7 +11,5 @@ import java.util.List;
 public class CoinoneCompleteOrder {
 
     @SerializedName("completeOrders")
-    public List<CompleteOrder> completeOrders;
-
-
+    public List<Order> completeOrders;
 }

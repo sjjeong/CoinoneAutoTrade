@@ -11,7 +11,7 @@ import java.util.List;
 public class CoinoneLimitOrder {
 
     @SerializedName("limitOrders")
-    public List<LimitOrder> limitOrders;
+    public List<Order> limitOrders;
 
 
 }

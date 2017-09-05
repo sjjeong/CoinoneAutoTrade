@@ -8,6 +8,7 @@ import android.support.v7.app.AppCompatActivity;
 
 import com.googry.coinoneautotrade.background.PersistentService;
 import com.googry.coinoneautotrade.background.RestartReceiver;
+import com.googry.coinoneautotrade.ui.control_center.ControlCenterActivity;
 
 /**
  * Created by seokjunjeong on 2017. 5. 31..
@@ -34,7 +35,8 @@ public class SplashActivity extends AppCompatActivity {
     }
 
     private void startApp() {
-        startActivity(new Intent(getApplicationContext(), MainActivity.class));
+//        startActivity(new Intent(getApplicationContext(), MainActivity.class));
+        startActivity(new Intent(getApplicationContext(), ControlCenterActivity.class));
         finish();
     }
 
