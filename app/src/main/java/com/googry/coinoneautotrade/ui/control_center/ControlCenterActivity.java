@@ -6,13 +6,14 @@ import android.support.v7.widget.Toolbar;
 
 import com.googry.coinoneautotrade.R;
 import com.googry.coinoneautotrade.base.ui.BaseActivity;
-import com.googry.coinoneautotrade.data.realm.AutoBotControl;
 
 /**
  * Created by seokjunjeong on 2017. 9. 5..
  */
 
 public class ControlCenterActivity extends BaseActivity<ControlCenterFragment> {
+    public static final String EXTRA_COIN_TYPE = "EXTRA_COIN_TYPE";
+
     @Override
     protected int getLayoutId() {
         return R.layout.simple_activity;
@@ -30,7 +31,7 @@ public class ControlCenterActivity extends BaseActivity<ControlCenterFragment> {
 
     @Override
     protected void initToolbar(@Nullable Bundle savedInstanceState) {
-        Toolbar toolbar = (Toolbar)findViewById(R.id.toolbar);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayShowTitleEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -38,6 +39,6 @@ public class ControlCenterActivity extends BaseActivity<ControlCenterFragment> {
 
     @Override
     protected ControlCenterFragment getFragment() {
-        return ControlCenterFragment.newInstance(AutoBotControl.XRP);
+        return ControlCenterFragment.newInstance(getIntent().getStringExtra(EXTRA_COIN_TYPE));
     }
 }

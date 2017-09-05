@@ -1,5 +1,6 @@
 package com.googry.coinoneautotrade;
 
+import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -7,8 +8,10 @@ import android.view.View;
 import android.widget.Button;
 
 import com.googry.coinoneautotrade.data.CoinoneBalance;
+import com.googry.coinoneautotrade.data.realm.AutoBotControl;
 import com.googry.coinoneautotrade.data.remote.CoinoneApiManager;
 import com.googry.coinoneautotrade.databinding.MainActivityBinding;
+import com.googry.coinoneautotrade.ui.control_center.ControlCenterActivity;
 import com.googry.coinoneautotrade.util.EncryptionUtil;
 import com.googry.coinoneautotrade.util.LogUtil;
 
@@ -54,31 +57,36 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    //databinding
-    public void onBuyCoinClick(View v) {
-        String buysell = ((Button) v).getText().toString();
-        long nonce = System.currentTimeMillis();
-        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(accessToken,
-                Long.parseLong(mBinding.etCoinPrice.getText().toString()),
-                Double.parseDouble(mBinding.etCoinAmount.getText().toString()),
-                mBinding.etCoinType.getText().toString(),
-                nonce);
-        String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
-        String signature = EncryptionUtil.getSignature(secretKey, encyptOrderBuyPayload);
-
-        CoinoneApiManager.CoinonePrivateApi api =
-                CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
-        Call<Void> call = api.buysell(buysell, encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
-        call.enqueue(new Callback<Void>() {
-            @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i(response.toString());
+    public void onCoinClick(View v){
+        Intent intent = new Intent(getApplicationContext(), ControlCenterActivity.class);
+        switch (v.getId()){
+            case R.id.ll_btc:{
+                intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.BTC);
             }
-
-            @Override
-            public void onFailure(Call<Void> call, Throwable t) {
-
+            break;
+            case R.id.ll_bch:{
+                intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.BCH);
             }
-        });
+            break;
+            case R.id.ll_eth:{
+                intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.ETH);
+            }
+            break;
+            case R.id.ll_etc:{
+                intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.ETC);
+            }
+            break;
+            case R.id.ll_xrp:{
+                intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.XRP);
+            }
+            break;
+            case R.id.ll_qtum:{
+                intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.QTUM);
+            }
+            break;
+        }
+        startActivity(intent);
+
     }
+
 }

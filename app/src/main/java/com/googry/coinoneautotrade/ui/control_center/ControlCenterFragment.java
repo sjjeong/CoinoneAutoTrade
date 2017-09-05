@@ -1,6 +1,8 @@
 package com.googry.coinoneautotrade.ui.control_center;
 
+import android.app.ProgressDialog;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 
 import com.googry.coinoneautotrade.R;
 import com.googry.coinoneautotrade.base.ui.BaseFragment;
@@ -85,12 +87,35 @@ public class ControlCenterFragment
         mBinding.setRunning(isRun);
     }
 
+    private ProgressDialog mProgressDialog;
+    @Override
+    public void showDialog(String msg) {
+        mProgressDialog = new ProgressDialog(getContext());
+        mProgressDialog.setMessage(msg);
+        mProgressDialog.setCancelable(false);
+        mProgressDialog.show();
+    }
+
+    @Override
+    public void hideDialog() {
+        if(mProgressDialog != null && mProgressDialog.isShowing()){
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mProgressDialog.hide();
+                    mProgressDialog = null;
+                }
+            });
+        }
+
+    }
+
     public void prepareRun() {
         mPresenter.requestRun(
                 Float.valueOf(mBinding.etPricePercent.getText().toString()),
                 Float.valueOf(mBinding.etBidPriceRange.getText().toString()),
-                Float.valueOf(mBinding.etBuyAmount.getText().toString()),
-                Float.valueOf(mBinding.etSellAmout.getText().toString())
+                Double.valueOf(mBinding.etBuyAmount.getText().toString()),
+                Double.valueOf(mBinding.etSellAmout.getText().toString())
         );
     }
 }

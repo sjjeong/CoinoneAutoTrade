@@ -79,6 +79,11 @@ public class CoinoneApiManager {
                 @Header("X-COINONE-PAYLOAD") String payload,
                 @Header("X-COINONE-SIGNATURE") String signature,
                 @Body String body);
+        @POST("v2/order/cancel/")
+        Call<Void> cancelOrder(
+                @Header("X-COINONE-PAYLOAD") String payload,
+                @Header("X-COINONE-SIGNATURE") String signature,
+                @Body String body);
     }
 
     public interface CoinonePublicApi {

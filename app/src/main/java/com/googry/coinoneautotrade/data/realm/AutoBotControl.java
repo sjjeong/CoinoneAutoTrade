@@ -42,19 +42,19 @@ public class AutoBotControl extends RealmObject {
      * 사는 수량
      * 파는 수량
      */
-    public float buyAmount;
-    public float sellAmout;
+    public double buyAmount;
+    public double sellAmount;
 
 
     public AutoBotControl(String coinType) {
         this.coinType = coinType;
         this.runFlag = false;
+        pricePercent = 1.01f;
+        bidPriceRange = 0.9f;
         switch (coinType) {
             case XRP:{
-                pricePercent = 1.015f;
-                bidPriceRange = 0.9f;
-                buyAmount = 100f;
-                sellAmout = 99f;
+                buyAmount = Double.valueOf("200");
+                sellAmount = Double.valueOf("199.8");
             }
             break;
         }
@@ -62,4 +62,5 @@ public class AutoBotControl extends RealmObject {
 
     public AutoBotControl() {
     }
+
 }

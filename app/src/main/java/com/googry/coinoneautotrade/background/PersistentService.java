@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.util.Log;
 
 import com.googry.coinoneautotrade.Config;
 import com.googry.coinoneautotrade.data.CoinoneCompleteOrder;
@@ -21,8 +22,6 @@ import com.googry.coinoneautotrade.util.LogUtil;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedList;
-import java.util.Queue;
 
 import io.realm.Realm;
 import retrofit2.Call;
@@ -41,6 +40,10 @@ public class PersistentService extends Service {
 
     private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
 
+    private static final int COIN_TYPE_CNT = 6;
+
+    private static int mCoinCycle;
+
     private CountDownTimer countDownTimer;
 
     private Context mContext;
@@ -51,6 +54,7 @@ public class PersistentService extends Service {
     private double mBuyAmount;
     private double mSellAmount;
     private double mPricePercent;
+    private double divideUnit;
 
     private CoinoneApiManager.CoinonePrivateApi mPrivateApi;
     private CoinoneApiManager.CoinonePublicApi mPublicApi;
@@ -59,7 +63,7 @@ public class PersistentService extends Service {
      * Ticker
      */
     private CoinoneTicker.Ticker mTicker;
-    
+
     /**
      * prices
      */
@@ -102,6 +106,7 @@ public class PersistentService extends Service {
     private void initData() {
         mContext = this;
         mRealm = Realm.getDefaultInstance();
+        mCoinCycle = 0;
 
         mPrivateApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
         mPublicApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePublicApi.class);
@@ -114,15 +119,53 @@ public class PersistentService extends Service {
 
         countDownTimer = new CountDownTimer(MILLISINFUTURE, COUNT_DOWN_INTERVAL) {
             public void onTick(long millisUntilFinished) {
+                switch (mCoinCycle) {
+                    case 0: {
+                        mCoinType = AutoBotControl.BTC;
+                        divideUnit = 500;
+                    }
+                    break;
+                    case 1: {
+                        mCoinType = AutoBotControl.BCH;
+                        divideUnit = 100;
+                    }
+                    break;
+                    case 2: {
+                        mCoinType = AutoBotControl.ETH;
+                        divideUnit = 50;
+                    }
+                    break;
+                    case 3: {
+                        mCoinType = AutoBotControl.ETC;
+                        divideUnit = 10;
+                    }
+                    break;
+                    case 4: {
+                        mCoinType = AutoBotControl.XRP;
+                        divideUnit = 1;
+                    }
+                    break;
+                    case 5: {
+                        mCoinType = AutoBotControl.QTUM;
+                        divideUnit = 10;
+                    }
+                    break;
+                }
+                mCoinCycle = (mCoinCycle + 1) % COIN_TYPE_CNT;
+                LogUtil.i("coin cycle: " + mCoinType);
+                AutoBotControl control = mRealm.where(AutoBotControl.class).equalTo("coinType", mCoinType).findFirst();
+                if (control == null) {
+                    LogUtil.i("is null");
+                    return;
+                }
                 mCallCnt = 0;
-                mCoinType = "xrp";
-                mBuyAmount = 10;
-                mSellAmount = 9.99;
-                mPricePercent = 1.02;
+                mCoinType = control.coinType;
+                mBuyAmount = control.buyAmount;
+                mSellAmount = control.sellAmount;
+                mPricePercent = control.pricePercent;
                 /**
                  * Ticker
                  */
-                AutoBotControl control = mRealm.where(AutoBotControl.class).equalTo("coinType", mCoinType).findFirst();
                 if (control.runFlag)
                     callTicker();
             }
@@ -189,7 +232,7 @@ public class PersistentService extends Service {
                      * ask에 매도 주문
                      */
                     if ("bid".equals(order.type)) {
-                        long price = Math.round(((float) order.price) * mPricePercent);
+                        long price = (long) (Math.round(((float) order.price) * mPricePercent / divideUnit) * divideUnit);
                         if (!mAsks.contains(price) && mTicker.last < price) {
                             LogUtil.i("sell price: " + price);
                             callSellLimit(price);
@@ -197,19 +240,23 @@ public class PersistentService extends Service {
                     }
                 }
 
-                for (long i = mTicker.last - 1; i >= mBuyPriceMin; i--) {
+
+                for (long i = (long) (mTicker.last - divideUnit); i >= mBuyPriceMin; i = (long) (i - divideUnit)) {
                     /**
                      * bid(매수)에 가격이 없으므로 매수에 걸어야함
                      */
                     if (!mBids.contains(i)) {
-                        if (!mAsks.contains(Math.round(((float) i) * mPricePercent))) {
+                        long price = (long) (Math.round(((float) i) * mPricePercent / divideUnit) * divideUnit);
+                        if (!mAsks.contains(price)) {
                             /**
-                             * 매수를 i로 요청
+                             * 매수를 price로 요청
                              */
+                            Log.i("guray", "ticker: " + mTicker.last + ", price: " + i);
                             callBuyLimit(i);
                         }
                     }
                 }
+
             }
 
             @Override
@@ -271,6 +318,7 @@ public class PersistentService extends Service {
         if (mCallCnt++ >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
 
+        LogUtil.i("buyprice: " + price + ", buyAmount: " + mBuyAmount + ", coinType: " + mCoinType);
         String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
                 price,
                 mBuyAmount,
@@ -279,9 +327,7 @@ public class PersistentService extends Service {
         String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
         String signature = EncryptionUtil.getSignature(Config.SECRET_KEY, encyptOrderBuyPayload);
 
-        CoinoneApiManager.CoinonePrivateApi api =
-                CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
-        Call<Void> call = api.buysell("buy", encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
+        Call<Void> call = mPrivateApi.buysell("buy", encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
@@ -300,6 +346,7 @@ public class PersistentService extends Service {
         if (mCallCnt++ >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
 
+        LogUtil.i("sellprice: " + price + ", sellAmount: " + mSellAmount + ", coinType: " + mCoinType);
         String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
                 price,
                 mSellAmount,
@@ -308,9 +355,7 @@ public class PersistentService extends Service {
         String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
         String signature = EncryptionUtil.getSignature(Config.SECRET_KEY, encyptOrderBuyPayload);
 
-        CoinoneApiManager.CoinonePrivateApi api =
-                CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
-        Call<Void> call = api.buysell("sell", encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
+        Call<Void> call = mPrivateApi.buysell("sell", encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {

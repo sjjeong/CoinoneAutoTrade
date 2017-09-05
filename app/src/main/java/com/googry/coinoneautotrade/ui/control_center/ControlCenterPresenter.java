@@ -2,13 +2,16 @@ package com.googry.coinoneautotrade.ui.control_center;
 
 import com.googry.coinoneautotrade.Config;
 import com.googry.coinoneautotrade.data.CoinoneBalance;
+import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
 import com.googry.coinoneautotrade.data.CoinoneTicker;
-import com.googry.coinoneautotrade.data.CoinoneUserInfo;
-import com.googry.coinoneautotrade.data.UserInfo;
+import com.googry.coinoneautotrade.data.Order;
 import com.googry.coinoneautotrade.data.realm.AutoBotControl;
 import com.googry.coinoneautotrade.data.remote.CoinoneApiManager;
 import com.googry.coinoneautotrade.util.EncryptionUtil;
 import com.googry.coinoneautotrade.util.LogUtil;
+
+import java.io.IOException;
+import java.util.List;
 
 import io.realm.Realm;
 import retrofit2.Call;
@@ -20,6 +23,8 @@ import retrofit2.Response;
  */
 
 public class ControlCenterPresenter implements ControlCenterContract.Presenter {
+    private static final int ASK = 1;
+    private static final int BID = 0;
     private ControlCenterContract.View mView;
     private AutoBotControl mAutoBotControl;
     private Realm mRealm;
@@ -29,6 +34,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
 
     private CoinoneTicker.Ticker mTicker;
     private CoinoneBalance mCoinoneBalance;
+    private String mCoinType;
 
     public ControlCenterPresenter(ControlCenterContract.View view,
                                   Realm realm,
@@ -45,7 +51,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
         }
         mPrivateApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
         mPublicApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePublicApi.class);
-
+        mCoinType = coinType;
 
     }
 
@@ -55,7 +61,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
     }
 
     private void callTicker() {
-        Call<CoinoneTicker.Ticker> callTicker = mPublicApi.ticker(mAutoBotControl.coinType);
+        Call<CoinoneTicker.Ticker> callTicker = mPublicApi.ticker(mCoinType);
         callTicker.enqueue(new Callback<CoinoneTicker.Ticker>() {
             @Override
             public void onResponse(Call<CoinoneTicker.Ticker> call, Response<CoinoneTicker.Ticker> response) {
@@ -75,7 +81,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
 
     private void callBalance() {
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mAutoBotControl.coinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
         String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
         Call<CoinoneBalance> callBalance = mPrivateApi.balance(
@@ -88,7 +94,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
                 mCoinoneBalance = response.body();
                 long last = mTicker.last;
                 double balance = 0;
-                switch (mAutoBotControl.coinType) {
+                switch (mCoinType) {
                     case AutoBotControl.BTC: {
                         balance = mCoinoneBalance.balanceBtc.balance;
                     }
@@ -132,12 +138,60 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
     @Override
     public void requestBidClear() {
         LogUtil.i("bidClear");
+        mView.showDialog("매수 정리 중...");
+        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        Call<CoinoneLimitOrder> completeOrderCall = mPrivateApi.limitOrders(
+                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
+        );
+        completeOrderCall.enqueue(new Callback<CoinoneLimitOrder>() {
+            @Override
+            public void onResponse(Call<CoinoneLimitOrder> call, Response<CoinoneLimitOrder> response) {
+                if (response.body() == null)
+                    return;
+                final CoinoneLimitOrder order = response.body();
+                if (order.limitOrders.size() == 0)
+                    return;
+                callCancelOrder(order.limitOrders, BID);
+            }
+
+            @Override
+            public void onFailure(Call<CoinoneLimitOrder> call, Throwable t) {
+
+            }
+        });
     }
 
     @Override
     public void requestAskClear() {
         LogUtil.i("askClear");
+        mView.showDialog("매도 정리 중...");
 
+        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        Call<CoinoneLimitOrder> completeOrderCall = mPrivateApi.limitOrders(
+                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
+        );
+        completeOrderCall.enqueue(new Callback<CoinoneLimitOrder>() {
+            @Override
+            public void onResponse(Call<CoinoneLimitOrder> call, Response<CoinoneLimitOrder> response) {
+                if (response.body() == null)
+                    return;
+                final CoinoneLimitOrder order = response.body();
+                if (order.limitOrders.size() == 0)
+                    return;
+                callCancelOrder(order.limitOrders, ASK);
+            }
+
+            @Override
+            public void onFailure(Call<CoinoneLimitOrder> call, Throwable t) {
+
+            }
+        });
     }
 
     @Override
@@ -154,12 +208,11 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
 
     }
 
-
     @Override
     public void requestRun(final float pricePercent,
                            final float bidPriceRange,
-                           final float buyAmount,
-                           final float sellAmount) {
+                           final double buyAmount,
+                           final double sellAmount) {
 
         mRealm.executeTransaction(new Realm.Transaction() {
             @Override
@@ -168,10 +221,46 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
                 mAutoBotControl.pricePercent = pricePercent;
                 mAutoBotControl.bidPriceRange = bidPriceRange;
                 mAutoBotControl.buyAmount = buyAmount;
-                mAutoBotControl.sellAmout = sellAmount;
+                mAutoBotControl.sellAmount = sellAmount;
                 realm.copyToRealmOrUpdate(mAutoBotControl);
                 mView.showRunning(mAutoBotControl.runFlag);
             }
         });
+    }
+
+    private void callCancelOrder(final List<Order> order, final int isAsk) {
+        Thread thread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (Order cancelOrder : order) {
+                    if ( ( (cancelOrder.type.equals("bid") && isAsk == ASK) ||
+                            (cancelOrder.type.equals("ask") && isAsk == BID) ) )
+                        continue;
+                    try {
+                        String limitOrdersPayload = EncryptionUtil.getJsonCancelOrder(
+                                Config.ACCESS_TOKEN,
+                                cancelOrder.orderId,
+                                cancelOrder.price,
+                                cancelOrder.qty,
+                                isAsk,
+                                mCoinType,
+                                System.currentTimeMillis());
+                        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
+                        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+                        Call<Void> call = mPrivateApi.cancelOrder(
+                                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
+                        );
+                        call.execute();
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+                mView.hideDialog();
+            }
+        });
+        thread.start();
     }
 }

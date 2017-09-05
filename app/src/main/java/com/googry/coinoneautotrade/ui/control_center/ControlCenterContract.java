@@ -18,8 +18,8 @@ public interface ControlCenterContract {
 
         void requestRun(float pricePercent,
                         float bidPriceRange,
-                        float buyAmount,
-                        float sellAmount);
+                        double buyAmount,
+                        double sellAmount);
     }
 
     interface View extends BaseView<Presenter> {
@@ -29,6 +29,10 @@ public interface ControlCenterContract {
                       AutoBotControl control);
 
         void showRunning(boolean isRun);
+
+        void showDialog(String msg);
+
+        void hideDialog();
     }
 
 }

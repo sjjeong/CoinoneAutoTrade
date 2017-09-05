@@ -16,6 +16,28 @@ import javax.crypto.spec.SecretKeySpec;
 public class EncryptionUtil {
     private final static char[] hexArray = "0123456789ABCDEF".toCharArray();
 
+    public static String getJsonCancelOrder(String accessToken,
+                                            String orderId,
+                                            long price,
+                                            double qty,
+                                            int isAsk,
+                                            String currency,
+                                            long nonce){
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("access_token", accessToken);
+            jsonObject.put("order_id", orderId);
+            jsonObject.put("price", price);
+            jsonObject.put("qty", qty);
+            jsonObject.put("is_ask", isAsk);
+            jsonObject.put("currency", currency);
+            jsonObject.put("nonce", nonce);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return jsonObject.toString();
+    }
+
     public static String getJsonLimitOrders(String accessToken,
                                             String currency,
                                             long nonce) {

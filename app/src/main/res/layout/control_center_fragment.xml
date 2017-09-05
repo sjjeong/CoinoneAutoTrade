@@ -184,8 +184,8 @@
                 android:id="@+id/et_sell_amout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:hint="@{String.valueOf(control.sellAmout)}"
-                android:text="@{String.valueOf(control.sellAmout)}"/>
+                android:hint="@{String.valueOf(control.sellAmount)}"
+                android:text="@{String.valueOf(control.sellAmount)}"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -196,6 +196,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:enabled="@{!running}"
                     android:onClick="@{(v) -> presenter.requestBidClear()}"
                     android:text="@string/bid_clear"/>
 
@@ -204,6 +205,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
+                    android:enabled="@{!running}"
                     android:onClick="@{(v) -> presenter.requestAskClear()}"
                     android:text="@string/ask_clear"/>
 
