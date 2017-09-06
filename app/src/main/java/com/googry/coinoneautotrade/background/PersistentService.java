@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.os.SystemClock;
-import android.util.Log;
 
 import com.googry.coinoneautotrade.Config;
 import com.googry.coinoneautotrade.data.CoinoneCompleteOrder;
@@ -35,7 +34,7 @@ import retrofit2.Response;
 
 public class PersistentService extends Service {
 
-    private static final int COUNT_DOWN_INTERVAL = 1000 * 3;
+    private static final int COUNT_DOWN_INTERVAL = 1000 * 2;
     private static final int MILLISINFUTURE = 86400 * 1000;
 
     private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
@@ -55,6 +54,7 @@ public class PersistentService extends Service {
     private double mSellAmount;
     private double mPricePercent;
     private double divideUnit;
+    private float mBidPriceRange;
 
     private CoinoneApiManager.CoinonePrivateApi mPrivateApi;
     private CoinoneApiManager.CoinonePublicApi mPublicApi;
@@ -69,6 +69,7 @@ public class PersistentService extends Service {
      */
     private ArrayList<Long> mAsks = new ArrayList<>();
     private ArrayList<Long> mBids = new ArrayList<>();
+    private ArrayList<Order> mBidOrders = new ArrayList<>();
 
     private Realm mRealm;
 
@@ -163,6 +164,7 @@ public class PersistentService extends Service {
                 mBuyAmount = control.buyAmount;
                 mSellAmount = control.sellAmount;
                 mPricePercent = control.pricePercent;
+                mBidPriceRange = control.bidPriceRange;
                 /**
                  * Ticker
                  */
@@ -189,7 +191,7 @@ public class PersistentService extends Service {
                 }
                 LogUtil.i("price: " + ticker.last);
                 mTicker = ticker;
-                mBuyPriceMin = (int) (ticker.last * 0.9);
+                mBuyPriceMin = (int) (ticker.last * mBidPriceRange);
                 /**
                  * LimitOrders
                  */
@@ -203,9 +205,60 @@ public class PersistentService extends Service {
         });
     }
 
-    private void callCompleteOrders() {
-        if (mCallCnt++ >= LIMIT_PRIVATE_API_CALL_COUNT)
+    private void callLimitOrders() {
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
+        mCallCnt++;
+
+        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        Call<CoinoneLimitOrder> callLimitOrders = mPrivateApi.limitOrders(
+                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
+
+        callLimitOrders.enqueue(new Callback<CoinoneLimitOrder>() {
+            @Override
+            public void onResponse(Call<CoinoneLimitOrder> call, Response<CoinoneLimitOrder> response) {
+                final CoinoneLimitOrder limitOrder = response.body();
+                if (limitOrder == null) {
+                    LogUtil.i("limitorder is null");
+                    return;
+                }
+
+                LogUtil.i("limit size: " + limitOrder.limitOrders.size());
+
+                mAsks.clear();
+                mBids.clear();
+                mBidOrders.clear();
+
+                for (Order order : limitOrder.limitOrders) {
+                    if (order.type.equals("ask")) {
+                        mAsks.add(order.price);
+                    } else {
+                        mBids.add(order.price);
+                        mBidOrders.add(order);
+                    }
+                }
+
+                Collections.sort(mAsks);
+                Collections.sort(mBids, Collections.<Long>reverseOrder());
+
+                callCompleteOrders();
+            }
+
+            @Override
+            public void onFailure(Call<CoinoneLimitOrder> call, Throwable t) {
+
+            }
+        });
+    }
+
+
+    private void callCompleteOrders() {
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
+            return;
+        mCallCnt++;
 
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
                 Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
@@ -234,7 +287,6 @@ public class PersistentService extends Service {
                     if ("bid".equals(order.type)) {
                         long price = (long) (Math.round(((float) order.price) * mPricePercent / divideUnit) * divideUnit);
                         if (!mAsks.contains(price) && mTicker.last < price) {
-                            LogUtil.i("sell price: " + price);
                             callSellLimit(price);
                         }
                     }
@@ -251,11 +303,18 @@ public class PersistentService extends Service {
                             /**
                              * 매수를 price로 요청
                              */
-                            Log.i("guray", "ticker: " + mTicker.last + ", price: " + i);
                             callBuyLimit(i);
                         }
                     }
                 }
+
+                int lowPrice = (int) (Math.round(((float) mTicker.last) * mBidPriceRange / divideUnit) * divideUnit);
+                for (Order cancelOrder : mBidOrders) {
+                    if (cancelOrder.price < lowPrice) {
+                        callCancelLimit(cancelOrder);
+                    }
+                }
+
 
             }
 
@@ -267,58 +326,39 @@ public class PersistentService extends Service {
     }
 
 
-    private void callLimitOrders() {
-        if (mCallCnt++ >= LIMIT_PRIVATE_API_CALL_COUNT)
+    private void callSellLimit(long price) {
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT - 1)
             return;
+        mCallCnt++;
 
-        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
-        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
-        Call<CoinoneLimitOrder> callLimitOrders = mPrivateApi.limitOrders(
-                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
+        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
+                price,
+                mSellAmount,
+                mCoinType,
+                System.currentTimeMillis());
+        String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
+        String signature = EncryptionUtil.getSignature(Config.SECRET_KEY, encyptOrderBuyPayload);
 
-        callLimitOrders.enqueue(new Callback<CoinoneLimitOrder>() {
+        Call<Void> call = mPrivateApi.buysell("sell", encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
+        call.enqueue(new Callback<Void>() {
             @Override
-            public void onResponse(Call<CoinoneLimitOrder> call, Response<CoinoneLimitOrder> response) {
-                final CoinoneLimitOrder limitOrder = response.body();
-                if (limitOrder == null) {
-                    LogUtil.i("limitorder is null");
-                    return;
-                }
-
-                LogUtil.i("limit size: " + limitOrder.limitOrders.size());
-
-                mAsks.clear();
-                mBids.clear();
-
-                for (Order order : limitOrder.limitOrders) {
-                    if (order.type.equals("ask")) {
-                        mAsks.add(order.price);
-                    } else {
-                        mBids.add(order.price);
-                    }
-                }
-
-                Collections.sort(mAsks);
-                Collections.sort(mBids, Collections.<Long>reverseOrder());
-
-                callCompleteOrders();
+            public void onResponse(Call<Void> call, Response<Void> response) {
+                LogUtil.i("sell\n" + response.toString());
             }
 
             @Override
-            public void onFailure(Call<CoinoneLimitOrder> call, Throwable t) {
+            public void onFailure(Call<Void> call, Throwable t) {
 
             }
         });
+
     }
 
-
     private void callBuyLimit(long price) {
-        if (mCallCnt++ >= LIMIT_PRIVATE_API_CALL_COUNT)
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
+        mCallCnt++;
 
-        LogUtil.i("buyprice: " + price + ", buyAmount: " + mBuyAmount + ", coinType: " + mCoinType);
         String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
                 price,
                 mBuyAmount,
@@ -342,24 +382,28 @@ public class PersistentService extends Service {
 
     }
 
-    private void callSellLimit(long price) {
-        if (mCallCnt++ >= LIMIT_PRIVATE_API_CALL_COUNT)
+    private void callCancelLimit(Order cancelOrder) {
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
+        mCallCnt++;
 
-        LogUtil.i("sellprice: " + price + ", sellAmount: " + mSellAmount + ", coinType: " + mCoinType);
-        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
-                price,
-                mSellAmount,
+        String limitOrdersPayload = EncryptionUtil.getJsonCancelOrder(
+                Config.ACCESS_TOKEN,
+                cancelOrder.orderId,
+                cancelOrder.price,
+                cancelOrder.qty,
+                0,
                 mCoinType,
                 System.currentTimeMillis());
-        String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
-        String signature = EncryptionUtil.getSignature(Config.SECRET_KEY, encyptOrderBuyPayload);
-
-        Call<Void> call = mPrivateApi.buysell("sell", encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
+        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        Call<Void> call = mPrivateApi.cancelOrder(
+                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
+        );
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i("sell\n" + response.toString());
+                LogUtil.i("cancel\n" + response.toString());
             }
 
             @Override
@@ -367,7 +411,6 @@ public class PersistentService extends Service {
 
             }
         });
-
     }
 
     /**
