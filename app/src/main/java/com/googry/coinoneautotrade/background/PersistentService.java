@@ -34,7 +34,7 @@ import retrofit2.Response;
 
 public class PersistentService extends Service {
 
-    private static final int COUNT_DOWN_INTERVAL = 1000 * 2;
+    private static final int COUNT_DOWN_INTERVAL = 1000 * 3;
     private static final int MILLISINFUTURE = 86400 * 1000;
 
     private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
