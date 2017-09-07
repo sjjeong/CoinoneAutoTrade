@@ -120,41 +120,47 @@ public class PersistentService extends Service {
 
         countDownTimer = new CountDownTimer(MILLISINFUTURE, COUNT_DOWN_INTERVAL) {
             public void onTick(long millisUntilFinished) {
-                switch (mCoinCycle) {
-                    case 0: {
-                        mCoinType = AutoBotControl.BTC;
-                        divideUnit = 500;
+                AutoBotControl control = null;
+                for (int i = 0; i < COIN_TYPE_CNT; i++) {
+                    switch (mCoinCycle) {
+                        case 0: {
+                            mCoinType = AutoBotControl.BTC;
+                            divideUnit = 500;
+                        }
+                        break;
+                        case 1: {
+                            mCoinType = AutoBotControl.BCH;
+                            divideUnit = 100;
+                        }
+                        break;
+                        case 2: {
+                            mCoinType = AutoBotControl.ETH;
+                            divideUnit = 50;
+                        }
+                        break;
+                        case 3: {
+                            mCoinType = AutoBotControl.ETC;
+                            divideUnit = 10;
+                        }
+                        break;
+                        case 4: {
+                            mCoinType = AutoBotControl.XRP;
+                            divideUnit = 1;
+                        }
+                        break;
+                        case 5: {
+                            mCoinType = AutoBotControl.QTUM;
+                            divideUnit = 10;
+                        }
+                        break;
                     }
-                    break;
-                    case 1: {
-                        mCoinType = AutoBotControl.BCH;
-                        divideUnit = 100;
-                    }
-                    break;
-                    case 2: {
-                        mCoinType = AutoBotControl.ETH;
-                        divideUnit = 50;
-                    }
-                    break;
-                    case 3: {
-                        mCoinType = AutoBotControl.ETC;
-                        divideUnit = 10;
-                    }
-                    break;
-                    case 4: {
-                        mCoinType = AutoBotControl.XRP;
-                        divideUnit = 1;
-                    }
-                    break;
-                    case 5: {
-                        mCoinType = AutoBotControl.QTUM;
-                        divideUnit = 10;
-                    }
-                    break;
+                    mCoinCycle = (mCoinCycle + 1) % COIN_TYPE_CNT;
+                    control = mRealm.where(AutoBotControl.class).equalTo("coinType", mCoinType).findFirst();
+                    if (control != null && control.runFlag)
+                        break;
                 }
-                mCoinCycle = (mCoinCycle + 1) % COIN_TYPE_CNT;
+
                 LogUtil.i("coin cycle: " + mCoinType);
-                AutoBotControl control = mRealm.where(AutoBotControl.class).equalTo("coinType", mCoinType).findFirst();
                 if (control == null) {
                     LogUtil.i("is null");
                     return;
