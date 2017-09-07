@@ -10,7 +10,6 @@ import android.os.IBinder;
 import android.os.SystemClock;
 
 import com.googry.coinoneautotrade.Config;
-import com.googry.coinoneautotrade.data.CoinoneCompleteOrder;
 import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
 import com.googry.coinoneautotrade.data.CoinoneTicker;
 import com.googry.coinoneautotrade.data.Order;
@@ -49,7 +48,8 @@ public class PersistentService extends Service {
 
     private String mCoinType;
     private int mCallCnt;
-    private int mBuyPriceMin;
+    private long mBuyPriceMin;
+    private long mSellPriceMax;
     private double mBuyAmount;
     private double mSellAmount;
     private double mPricePercent;
@@ -195,9 +195,11 @@ public class PersistentService extends Service {
                     LogUtil.i("ticker is null");
                     return;
                 }
-                LogUtil.i("price: " + ticker.last);
+                LogUtil.i("last price: " + ticker.last);
                 mTicker = ticker;
-                mBuyPriceMin = (int) (ticker.last * mBidPriceRange);
+                mBuyPriceMin = (long) (ticker.last * mBidPriceRange);
+                mSellPriceMax = (long) (ticker.last * (2 - mBidPriceRange));
+
                 /**
                  * LimitOrders
                  */
@@ -232,8 +234,6 @@ public class PersistentService extends Service {
                     return;
                 }
 
-                LogUtil.i("limit size: " + limitOrder.limitOrders.size());
-
                 mAsks.clear();
                 mBids.clear();
                 mBidOrders.clear();
@@ -250,50 +250,20 @@ public class PersistentService extends Service {
                 Collections.sort(mAsks);
                 Collections.sort(mBids, Collections.<Long>reverseOrder());
 
-                callCompleteOrders();
-            }
-
-            @Override
-            public void onFailure(Call<CoinoneLimitOrder> call, Throwable t) {
-
-            }
-        });
-    }
-
-
-    private void callCompleteOrders() {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
-            return;
-        mCallCnt++;
-
-        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
-        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
-        Call<CoinoneCompleteOrder> callCompleteOrders = mPrivateApi.completeOrders(
-                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
-
-        callCompleteOrders.enqueue(new Callback<CoinoneCompleteOrder>() {
-            @Override
-            public void onResponse(Call<CoinoneCompleteOrder> call, Response<CoinoneCompleteOrder> response) {
-                final CoinoneCompleteOrder completeOrder = response.body();
-                if (completeOrder == null) {
-                    LogUtil.i("completeOrder is null");
-                    return;
-                }
-
-                LogUtil.i("complete size: " + completeOrder.completeOrders.size());
-
-                for (Order order : completeOrder.completeOrders) {
-                    /**
-                     * bid는 매수
-                     * order.type이 bid이면 매수 채결
-                     * ask에 매도 주문
-                     */
-                    if ("bid".equals(order.type)) {
-                        long price = (long) (Math.round(((float) order.price) * mPricePercent / divideUnit) * divideUnit);
-                        if (!mAsks.contains(price) && mTicker.last < price) {
-                            callSellLimit(price);
+                /**
+                 * Ticker.last +
+                 * 이 bid에 걸려있는지 확인
+                 * 없으면 ask에 매도 주문
+                 */
+                for (long i = (long) (mTicker.last + divideUnit); i <= mSellPriceMax; i = (long) (i + divideUnit)) {
+                    if (!mAsks.contains(i)) {
+                        long price = (long) (Math.round(((float) i) * (2f - mPricePercent) / divideUnit) * divideUnit);
+                        if (!mBids.contains(price)) {
+                            /**
+                             * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
+                             */
+                            mAsks.add(i);
+                            callSellLimit(i);
                         }
                     }
                 }
@@ -320,12 +290,10 @@ public class PersistentService extends Service {
                         callCancelLimit(cancelOrder);
                     }
                 }
-
-
             }
 
             @Override
-            public void onFailure(Call<CoinoneCompleteOrder> call, Throwable t) {
+            public void onFailure(Call<CoinoneLimitOrder> call, Throwable t) {
 
             }
         });
@@ -333,7 +301,7 @@ public class PersistentService extends Service {
 
 
     private void callSellLimit(long price) {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT - 1)
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT - 2)
             return;
         mCallCnt++;
 
