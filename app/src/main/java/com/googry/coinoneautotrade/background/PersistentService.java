@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.os.SystemClock;
-import android.util.Log;
 
 import com.googry.coinoneautotrade.Config;
 import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
@@ -153,7 +152,7 @@ public class PersistentService extends Service {
                         case 6:
                         case 7:
                         case 8:
-                        case 9:{
+                        case 9: {
                             mCoinType = AutoBotControl.QTUM;
                             divideUnit = 10;
                         }
@@ -259,7 +258,7 @@ public class PersistentService extends Service {
                  * 이 bid에 걸려있는지 확인
                  * 없으면 ask에 매도 주문
                  */
-                for (long i = (long) (mTicker.last + divideUnit); i <= mSellPriceMax; i = (long) (i + divideUnit)) {
+                for (long i = (long) (mTicker.last + divideUnit * 2); i <= mSellPriceMax; i = (long) (i + divideUnit)) {
                     if (!mAsks.contains(i)) {
                         long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
                         if (!mBids.contains(price)) {
