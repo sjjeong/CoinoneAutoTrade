@@ -303,7 +303,7 @@ public class PersistentService extends Service {
 
 
     private void callSellLimit(long price) {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT - 2)
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT - 1)
             return;
         mCallCnt++;
 
