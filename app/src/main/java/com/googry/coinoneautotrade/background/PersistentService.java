@@ -10,6 +10,7 @@ import android.os.IBinder;
 import android.os.SystemClock;
 
 import com.googry.coinoneautotrade.Config;
+import com.googry.coinoneautotrade.data.CoinoneBalance;
 import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
 import com.googry.coinoneautotrade.data.CoinoneTicker;
 import com.googry.coinoneautotrade.data.Order;
@@ -199,7 +200,7 @@ public class PersistentService extends Service {
                     LogUtil.e("ticker is null");
                     return;
                 }
-                LogUtil.i(String.format("Price %,d \t\t %+d %s", ticker.last , ticker.last - mLastPrice,
+                LogUtil.i(String.format("Price\t%,d\t\t %+d %s", ticker.last, ticker.last - mLastPrice,
                         ticker.last > mLastPrice ? "UP" : ticker.last < mLastPrice ? "DOWN" : "X_X"));
                 mLastPrice = ticker.last;
                 mBuyPriceMin = (long) (ticker.last * mBidPriceRange);
@@ -290,7 +291,7 @@ public class PersistentService extends Service {
                      * bid(매수)에 가격이 없으므로 매수에 걸어야함
                      */
                     if (!mBids.contains(i)) {
-                        long price = (long) (Math.round(((float) i) * mPricePercent * 0.99f / divideUnit) * divideUnit);
+                        long price = (long) (Math.round(((float) i) * mPricePercent / divideUnit) * divideUnit);
                         if (!mAsks.contains(price)) {
                             /**
                              * 매수를 price로 요청
@@ -300,14 +301,14 @@ public class PersistentService extends Service {
                     }
                 }
 
-                int lowPrice = (int) (Math.round(((float) mLastPrice) * mBidPriceRange / divideUnit) * divideUnit);
+                int lowPrice = (int) (Math.round(((float) mLastPrice) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
                 for (Order cancelOrder : mBidOrders) {
                     if (cancelOrder.price < lowPrice) {
                         callCancelLimit(cancelOrder);
                     }
                 }
                 if (mCallCnt == 1) {
-                    callSellLimit(1000000L, 0.5);
+                    callBalance();
                 }
             }
 
@@ -335,7 +336,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i("sell: \t" + String.format("%,d", price) + " amount: " + sellAmount);
+                LogUtil.i(String.format("sell\t%,d\t\tamount ", price, sellAmount));
             }
 
             @Override
@@ -362,7 +363,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i("buy: \t" + String.format("%,d", price) + " amount: " + buyAmount);
+                LogUtil.i(String.format("buy\t%,d\t\tamount ", price, buyAmount));
             }
 
             @Override
@@ -393,7 +394,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i("cancel: \t" + String.format("%,d", cancelOrder.price));
+                LogUtil.i(String.format("cancel\t%,d ", cancelOrder.price));
             }
 
             @Override
@@ -401,6 +402,60 @@ public class PersistentService extends Service {
             }
         });
     }
+
+    private void callBalance() {
+        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        Call<CoinoneBalance> callBalance = mPrivateApi.balance(
+                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
+        callBalance.enqueue(new Callback<CoinoneBalance>() {
+            @Override
+            public void onResponse(Call<CoinoneBalance> call, Response<CoinoneBalance> response) {
+                if (response.body() == null)
+                    return;
+                CoinoneBalance coinoneBalance = response.body();
+                double avail = 0;
+                switch (mCoinType) {
+                    case AutoBotControl.BTC: {
+                        avail = coinoneBalance.balanceBtc.avail;
+                    }
+                    break;
+                    case AutoBotControl.BCH: {
+                        avail = coinoneBalance.balanceBch.avail;
+                    }
+                    break;
+                    case AutoBotControl.ETH: {
+                        avail = coinoneBalance.balanceEth.avail;
+                    }
+                    break;
+                    case AutoBotControl.ETC: {
+                        avail = coinoneBalance.balanceEtc.avail;
+                    }
+                    break;
+                    case AutoBotControl.XRP: {
+                        avail = coinoneBalance.balanceXrp.avail;
+                    }
+                    break;
+                    case AutoBotControl.QTUM: {
+                        avail = coinoneBalance.balanceQtum.avail;
+                    }
+                    break;
+                }
+                if (avail / mSellAmount < 1) {
+                    callSellLimit(1000000L, 0.5);
+                }
+
+            }
+
+            @Override
+            public void onFailure(Call<CoinoneBalance> call, Throwable t) {
+
+            }
+        });
+    }
+
 
     /**
      * 알람 매니져에 서비스 등록
