@@ -8,6 +8,7 @@ import android.content.Intent;
 import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.os.SystemClock;
+import android.util.Log;
 
 import com.googry.coinoneautotrade.Config;
 import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
@@ -38,7 +39,7 @@ public class PersistentService extends Service {
 
     private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
 
-    private static final int COIN_TYPE_CNT = 6;
+    private static final int COIN_TYPE_CNT = 10;
 
     private static int mCoinCycle;
 
@@ -148,7 +149,11 @@ public class PersistentService extends Service {
                             divideUnit = 1;
                         }
                         break;
-                        case 5: {
+                        case 5:
+                        case 6:
+                        case 7:
+                        case 8:
+                        case 9:{
                             mCoinType = AutoBotControl.QTUM;
                             divideUnit = 10;
                         }
@@ -198,7 +203,7 @@ public class PersistentService extends Service {
                 LogUtil.i("last price: " + ticker.last);
                 mTicker = ticker;
                 mBuyPriceMin = (long) (ticker.last * mBidPriceRange);
-                mSellPriceMax = (long) (ticker.last * (2 - mBidPriceRange));
+                mSellPriceMax = (long) (ticker.last * 1.3);
 
                 /**
                  * LimitOrders
@@ -208,7 +213,6 @@ public class PersistentService extends Service {
 
             @Override
             public void onFailure(Call<CoinoneTicker.Ticker> call, Throwable t) {
-
             }
         });
     }
@@ -257,7 +261,7 @@ public class PersistentService extends Service {
                  */
                 for (long i = (long) (mTicker.last + divideUnit); i <= mSellPriceMax; i = (long) (i + divideUnit)) {
                     if (!mAsks.contains(i)) {
-                        long price = (long) (Math.round(((float) i) * (2f - mPricePercent) / divideUnit) * divideUnit);
+                        long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
                         if (!mBids.contains(price)) {
                             /**
                              * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
@@ -294,7 +298,6 @@ public class PersistentService extends Service {
 
             @Override
             public void onFailure(Call<CoinoneLimitOrder> call, Throwable t) {
-
             }
         });
     }
@@ -322,7 +325,6 @@ public class PersistentService extends Service {
 
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
-
             }
         });
 
@@ -350,7 +352,6 @@ public class PersistentService extends Service {
 
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
-
             }
         });
 
@@ -382,7 +383,6 @@ public class PersistentService extends Service {
 
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
-
             }
         });
     }
