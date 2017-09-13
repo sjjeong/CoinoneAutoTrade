@@ -9,10 +9,13 @@ import com.googry.coinoneautotrade.BuildConfig;
  */
 
 public class LogUtil {
-    private static final boolean ISDEBUG = BuildConfig.DEBUG;
+    private static final boolean IS_DEBUG = BuildConfig.DEBUG;
     private static final String TAG = "googry";
 
     public static void i(String message) {
-        if (ISDEBUG) Log.i(TAG, message);
+        if (IS_DEBUG) Log.i(TAG, message);
+    }
+    public static void e(String message) {
+        if (IS_DEBUG) Log.e(TAG, message);
     }
 }

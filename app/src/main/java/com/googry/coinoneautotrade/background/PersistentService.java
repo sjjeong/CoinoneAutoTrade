@@ -40,6 +40,8 @@ public class PersistentService extends Service {
 
     private static final int COIN_TYPE_CNT = 10;
 
+    private static final int SELL_RANGE_ABS = 50;
+
     private static int mCoinCycle;
 
     private CountDownTimer countDownTimer;
@@ -55,14 +57,10 @@ public class PersistentService extends Service {
     private double mPricePercent;
     private double divideUnit;
     private float mBidPriceRange;
+    private long mLastPrice;
 
     private CoinoneApiManager.CoinonePrivateApi mPrivateApi;
     private CoinoneApiManager.CoinonePublicApi mPublicApi;
-
-    /**
-     * Ticker
-     */
-    private CoinoneTicker.Ticker mTicker;
 
     /**
      * prices
@@ -108,6 +106,7 @@ public class PersistentService extends Service {
         mContext = this;
         mRealm = Realm.getDefaultInstance();
         mCoinCycle = 0;
+        mLastPrice = 0;
 
         mPrivateApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
         mPublicApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePublicApi.class);
@@ -164,7 +163,8 @@ public class PersistentService extends Service {
                         break;
                 }
 
-                LogUtil.i("coin cycle: " + mCoinType);
+                LogUtil.i("----------------------------------------");
+                LogUtil.i("[ " + mCoinType + " ]");
                 if (control == null) {
                     LogUtil.i("is null");
                     return;
@@ -196,13 +196,14 @@ public class PersistentService extends Service {
             public void onResponse(Call<CoinoneTicker.Ticker> call, Response<CoinoneTicker.Ticker> response) {
                 CoinoneTicker.Ticker ticker = response.body();
                 if (ticker == null) {
-                    LogUtil.i("ticker is null");
+                    LogUtil.e("ticker is null");
                     return;
                 }
-                LogUtil.i("last price: " + ticker.last);
-                mTicker = ticker;
+                LogUtil.i(String.format("Price %,d \t\t %+d %s", ticker.last , ticker.last - mLastPrice,
+                        ticker.last > mLastPrice ? "UP" : ticker.last < mLastPrice ? "DOWN" : "X_X"));
+                mLastPrice = ticker.last;
                 mBuyPriceMin = (long) (ticker.last * mBidPriceRange);
-                mSellPriceMax = (long) (ticker.last * 1.3);
+                mSellPriceMax = (long) (ticker.last + (divideUnit * SELL_RANGE_ABS));
 
                 /**
                  * LimitOrders
@@ -233,7 +234,7 @@ public class PersistentService extends Service {
             public void onResponse(Call<CoinoneLimitOrder> call, Response<CoinoneLimitOrder> response) {
                 final CoinoneLimitOrder limitOrder = response.body();
                 if (limitOrder == null) {
-                    LogUtil.i("limitorder is null");
+                    LogUtil.e("limitorder is null");
                     return;
                 }
 
@@ -258,7 +259,7 @@ public class PersistentService extends Service {
                  * 이 bid에 걸려있는지 확인
                  * 없으면 ask에 매도 주문
                  */
-                for (long i = (long) (mTicker.last + divideUnit * 2); i <= mSellPriceMax; i = (long) (i + divideUnit)) {
+                for (long i = mSellPriceMax; i > (long) (mLastPrice + divideUnit * 2); i = (long) (i - divideUnit)) {
                     if (!mAsks.contains(i)) {
                         long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
                         if (!mBids.contains(price)) {
@@ -266,13 +267,25 @@ public class PersistentService extends Service {
                              * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
                              */
                             mAsks.add(i);
-                            callSellLimit(i);
+                            callSellLimit(i, mSellAmount);
                         }
                     }
                 }
+//                for (long i = (long) (mLastPrice + divideUnit * 2); i <= mSellPriceMax; i = (long) (i + divideUnit)) {
+//                    if (!mAsks.contains(i)) {
+//                        long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
+//                        if (!mBids.contains(price)) {
+//                            /**
+//                             * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
+//                             */
+//                            mAsks.add(i);
+//                            callSellLimit(i);
+//                        }
+//                    }
+//                }
 
 
-                for (long i = (long) (mTicker.last - divideUnit); i >= mBuyPriceMin; i = (long) (i - divideUnit)) {
+                for (long i = (long) (mLastPrice - divideUnit * 2); i >= mBuyPriceMin; i = (long) (i - divideUnit)) {
                     /**
                      * bid(매수)에 가격이 없으므로 매수에 걸어야함
                      */
@@ -282,16 +295,19 @@ public class PersistentService extends Service {
                             /**
                              * 매수를 price로 요청
                              */
-                            callBuyLimit(i);
+                            callBuyLimit(i, mBuyAmount);
                         }
                     }
                 }
 
-                int lowPrice = (int) (Math.round(((float) mTicker.last) * mBidPriceRange / divideUnit) * divideUnit);
+                int lowPrice = (int) (Math.round(((float) mLastPrice) * mBidPriceRange / divideUnit) * divideUnit);
                 for (Order cancelOrder : mBidOrders) {
                     if (cancelOrder.price < lowPrice) {
                         callCancelLimit(cancelOrder);
                     }
+                }
+                if (mCallCnt == 1) {
+                    callSellLimit(1000000L, 0.5);
                 }
             }
 
@@ -302,14 +318,14 @@ public class PersistentService extends Service {
     }
 
 
-    private void callSellLimit(long price) {
+    private void callSellLimit(final long price, final double sellAmount) {
         if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT - 1)
             return;
         mCallCnt++;
 
         String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
                 price,
-                mSellAmount,
+                sellAmount,
                 mCoinType,
                 System.currentTimeMillis());
         String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
@@ -319,7 +335,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i("sell\n" + response.toString());
+                LogUtil.i("sell: \t" + String.format("%,d", price) + " amount: " + sellAmount);
             }
 
             @Override
@@ -329,14 +345,14 @@ public class PersistentService extends Service {
 
     }
 
-    private void callBuyLimit(long price) {
+    private void callBuyLimit(final long price, final double buyAmount) {
         if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
         mCallCnt++;
 
         String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
                 price,
-                mBuyAmount,
+                buyAmount,
                 mCoinType,
                 System.currentTimeMillis());
         String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
@@ -346,7 +362,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i("buy\n" + response.toString());
+                LogUtil.i("buy: \t" + String.format("%,d", price) + " amount: " + buyAmount);
             }
 
             @Override
@@ -356,7 +372,7 @@ public class PersistentService extends Service {
 
     }
 
-    private void callCancelLimit(Order cancelOrder) {
+    private void callCancelLimit(final Order cancelOrder) {
         if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
         mCallCnt++;
@@ -377,7 +393,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i("cancel\n" + response.toString());
+                LogUtil.i("cancel: \t" + String.format("%,d", cancelOrder.price));
             }
 
             @Override
