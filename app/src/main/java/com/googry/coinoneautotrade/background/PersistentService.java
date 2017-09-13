@@ -290,7 +290,7 @@ public class PersistentService extends Service {
                      * bid(매수)에 가격이 없으므로 매수에 걸어야함
                      */
                     if (!mBids.contains(i)) {
-                        long price = (long) (Math.round(((float) i) * mPricePercent / divideUnit) * divideUnit);
+                        long price = (long) (Math.round(((float) i) * mPricePercent * 0.99f / divideUnit) * divideUnit);
                         if (!mAsks.contains(price)) {
                             /**
                              * 매수를 price로 요청
