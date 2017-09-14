@@ -41,7 +41,7 @@ public class PersistentService extends Service {
 
     private static final int COIN_TYPE_CNT = 10;
 
-    private static final int SELL_RANGE_ABS = 50;
+    private static final int SELL_RANGE_ABS = 20;
 
     private static int mCoinCycle;
 
@@ -59,6 +59,9 @@ public class PersistentService extends Service {
     private double divideUnit;
     private float mBidPriceRange;
     private long mLastPrice;
+
+    private CoinoneBalance.Balance mBalance;
+    private CoinoneBalance.Balance mBalanceKrw;
 
     private CoinoneApiManager.CoinonePrivateApi mPrivateApi;
     private CoinoneApiManager.CoinonePublicApi mPublicApi;
@@ -203,17 +206,74 @@ public class PersistentService extends Service {
                 LogUtil.i(String.format("Price\t%,d\t\t %+d %s", ticker.last, ticker.last - mLastPrice,
                         ticker.last > mLastPrice ? "UP" : ticker.last < mLastPrice ? "DOWN" : "X_X"));
                 mLastPrice = ticker.last;
-                mBuyPriceMin = (long) (ticker.last * mBidPriceRange);
+                mBuyPriceMin = (long) (Math.round(((float) ticker.last) * mBidPriceRange / divideUnit) * divideUnit);
                 mSellPriceMax = (long) (ticker.last + (divideUnit * SELL_RANGE_ABS));
+
+                callBalance();
+            }
+
+            @Override
+            public void onFailure(Call<CoinoneTicker.Ticker> call, Throwable t) {
+            }
+        });
+    }
+
+    private void callBalance() {
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
+            return;
+        mCallCnt++;
+
+        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        Call<CoinoneBalance> callBalance = mPrivateApi.balance(
+                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
+        callBalance.enqueue(new Callback<CoinoneBalance>() {
+            @Override
+            public void onResponse(Call<CoinoneBalance> call, Response<CoinoneBalance> response) {
+                if (response.body() == null)
+                    return;
+                CoinoneBalance coinoneBalance = response.body();
+                switch (mCoinType) {
+                    case AutoBotControl.BTC: {
+                        mBalance = coinoneBalance.balanceBtc;
+                    }
+                    break;
+                    case AutoBotControl.BCH: {
+                        mBalance = coinoneBalance.balanceBch;
+                    }
+                    break;
+                    case AutoBotControl.ETH: {
+                        mBalance = coinoneBalance.balanceEth;
+                    }
+                    break;
+                    case AutoBotControl.ETC: {
+                        mBalance = coinoneBalance.balanceEtc;
+                    }
+                    break;
+                    case AutoBotControl.XRP: {
+                        mBalance = coinoneBalance.balanceXrp;
+                    }
+                    break;
+                    case AutoBotControl.QTUM: {
+                        mBalance = coinoneBalance.balanceQtum;
+                    }
+                    break;
+                }
+                mBalanceKrw = coinoneBalance.balanceKrw;
 
                 /**
                  * LimitOrders
                  */
                 callLimitOrders();
+
             }
 
+
             @Override
-            public void onFailure(Call<CoinoneTicker.Ticker> call, Throwable t) {
+            public void onFailure(Call<CoinoneBalance> call, Throwable t) {
+
             }
         });
     }
@@ -255,60 +315,49 @@ public class PersistentService extends Service {
                 Collections.sort(mAsks);
                 Collections.sort(mBids, Collections.<Long>reverseOrder());
 
-                /**
-                 * Ticker.last +
-                 * 이 bid에 걸려있는지 확인
-                 * 없으면 ask에 매도 주문
-                 */
-                for (long i = mSellPriceMax; i > (long) (mLastPrice + divideUnit * 2); i = (long) (i - divideUnit)) {
-                    if (!mAsks.contains(i)) {
-                        long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
-                        if (!mBids.contains(price)) {
+                if (mBalance.avail < mSellAmount) {
+                    if (mBalanceKrw.avail < mLastPrice) {
+//                        callSellLimit(1000000L, 0.5);
+                    } else {
+                        for (long i = mBuyPriceMin; i < (long) (mLastPrice - divideUnit * 2); i = (long) (i + divideUnit)) {
                             /**
-                             * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
+                             * bid(매수)에 가격이 없으므로 매수에 걸어야함
                              */
-                            mAsks.add(i);
-                            callSellLimit(i, mSellAmount);
+                            if (!mBids.contains(i)) {
+                                long price = (long) (Math.round(((float) i) * mPricePercent / divideUnit) * divideUnit);
+                                if (!mAsks.contains(price)) {
+                                    /**
+                                     * 매수를 price로 요청
+                                     */
+                                    callBuyLimit(i, mBuyAmount);
+                                }
+                            }
                         }
                     }
-                }
-//                for (long i = (long) (mLastPrice + divideUnit * 2); i <= mSellPriceMax; i = (long) (i + divideUnit)) {
-//                    if (!mAsks.contains(i)) {
-//                        long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
-//                        if (!mBids.contains(price)) {
-//                            /**
-//                             * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
-//                             */
-//                            mAsks.add(i);
-//                            callSellLimit(i);
-//                        }
-//                    }
-//                }
-
-
-                for (long i = (long) (mLastPrice - divideUnit * 2); i >= mBuyPriceMin; i = (long) (i - divideUnit)) {
+                } else {
                     /**
-                     * bid(매수)에 가격이 없으므로 매수에 걸어야함
+                     * Ticker.last +
+                     * 이 bid에 걸려있는지 확인
+                     * 없으면 ask에 매도 주문
                      */
-                    if (!mBids.contains(i)) {
-                        long price = (long) (Math.round(((float) i) * mPricePercent / divideUnit) * divideUnit);
-                        if (!mAsks.contains(price)) {
-                            /**
-                             * 매수를 price로 요청
-                             */
-                            callBuyLimit(i, mBuyAmount);
+                    for (long i = mSellPriceMax; i > (long) (mLastPrice + divideUnit * 2); i = (long) (i - divideUnit)) {
+                        if (!mAsks.contains(i)) {
+                            long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
+                            if (!mBids.contains(price)) {
+                                /**
+                                 * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
+                                 */
+                                mAsks.add(i);
+                                callSellLimit(i, mSellAmount);
+                            }
                         }
                     }
                 }
-
                 int lowPrice = (int) (Math.round(((float) mLastPrice) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
                 for (Order cancelOrder : mBidOrders) {
                     if (cancelOrder.price < lowPrice) {
                         callCancelLimit(cancelOrder);
                     }
-                }
-                if (mCallCnt == 1) {
-                    callBalance();
                 }
             }
 
@@ -320,7 +369,7 @@ public class PersistentService extends Service {
 
 
     private void callSellLimit(final long price, final double sellAmount) {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT - 1)
+        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
         mCallCnt++;
 
@@ -399,59 +448,6 @@ public class PersistentService extends Service {
 
             @Override
             public void onFailure(Call<Void> call, Throwable t) {
-            }
-        });
-    }
-
-    private void callBalance() {
-        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
-        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
-        Call<CoinoneBalance> callBalance = mPrivateApi.balance(
-                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
-        callBalance.enqueue(new Callback<CoinoneBalance>() {
-            @Override
-            public void onResponse(Call<CoinoneBalance> call, Response<CoinoneBalance> response) {
-                if (response.body() == null)
-                    return;
-                CoinoneBalance coinoneBalance = response.body();
-                double avail = 0;
-                switch (mCoinType) {
-                    case AutoBotControl.BTC: {
-                        avail = coinoneBalance.balanceBtc.avail;
-                    }
-                    break;
-                    case AutoBotControl.BCH: {
-                        avail = coinoneBalance.balanceBch.avail;
-                    }
-                    break;
-                    case AutoBotControl.ETH: {
-                        avail = coinoneBalance.balanceEth.avail;
-                    }
-                    break;
-                    case AutoBotControl.ETC: {
-                        avail = coinoneBalance.balanceEtc.avail;
-                    }
-                    break;
-                    case AutoBotControl.XRP: {
-                        avail = coinoneBalance.balanceXrp.avail;
-                    }
-                    break;
-                    case AutoBotControl.QTUM: {
-                        avail = coinoneBalance.balanceQtum.avail;
-                    }
-                    break;
-                }
-                if (avail / mSellAmount < 1) {
-                    callSellLimit(1000000L, 0.5);
-                }
-
-            }
-
-            @Override
-            public void onFailure(Call<CoinoneBalance> call, Throwable t) {
-
             }
         });
     }
