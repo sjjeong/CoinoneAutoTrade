@@ -357,6 +357,7 @@ public class PersistentService extends Service {
                 for (Order cancelOrder : mBidOrders) {
                     if (cancelOrder.price < lowPrice) {
                         callCancelLimit(cancelOrder);
+                        break;
                     }
                 }
             }
