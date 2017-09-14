@@ -40,9 +40,7 @@ public class PersistentService extends Service {
     private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
 
     private static final int COIN_TYPE_CNT = 10;
-
-    private static final int SELL_RANGE_ABS = 20;
-
+    
     private static int mCoinCycle;
 
     private CountDownTimer countDownTimer;
@@ -207,7 +205,7 @@ public class PersistentService extends Service {
                         ticker.last > mLastPrice ? "UP" : ticker.last < mLastPrice ? "DOWN" : "X_X"));
                 mLastPrice = ticker.last;
                 mBuyPriceMin = (long) (Math.round(((float) ticker.last) * mBidPriceRange / divideUnit) * divideUnit);
-                mSellPriceMax = (long) (ticker.last + (divideUnit * SELL_RANGE_ABS));
+                mSellPriceMax = (long) (Math.round(((float) ticker.last) / (mBidPriceRange + 0.03) / divideUnit) * divideUnit);
 
                 callBalance();
             }
