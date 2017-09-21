@@ -39,8 +39,8 @@ public class PersistentService extends Service {
 
     private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
 
-    private static final int COIN_TYPE_CNT = 10;
-    
+    private static final int COIN_TYPE_CNT = 6;
+
     private static int mCoinCycle;
 
     private CountDownTimer countDownTimer;
@@ -56,7 +56,7 @@ public class PersistentService extends Service {
     private double mPricePercent;
     private double divideUnit;
     private float mBidPriceRange;
-    private long mLastPrice;
+    private long mLastPrice[] = new long[COIN_TYPE_CNT];
 
     private CoinoneBalance.Balance mBalance;
     private CoinoneBalance.Balance mBalanceKrw;
@@ -108,7 +108,6 @@ public class PersistentService extends Service {
         mContext = this;
         mRealm = Realm.getDefaultInstance();
         mCoinCycle = 0;
-        mLastPrice = 0;
 
         mPrivateApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
         mPublicApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePublicApi.class);
@@ -149,11 +148,7 @@ public class PersistentService extends Service {
                             divideUnit = 1;
                         }
                         break;
-                        case 5:
-                        case 6:
-                        case 7:
-                        case 8:
-                        case 9: {
+                        case 5: {
                             mCoinType = AutoBotControl.QTUM;
                             divideUnit = 10;
                         }
@@ -201,11 +196,11 @@ public class PersistentService extends Service {
                     LogUtil.e("ticker is null");
                     return;
                 }
-                LogUtil.i(String.format("Price\t%,d\t\t %+d %s", ticker.last, ticker.last - mLastPrice,
-                        ticker.last > mLastPrice ? "UP" : ticker.last < mLastPrice ? "DOWN" : "X_X"));
-                mLastPrice = ticker.last;
+                LogUtil.i(String.format("Price\t%,d\t\t %+d %s", ticker.last, ticker.last - mLastPrice[mCoinCycle],
+                        ticker.last > mLastPrice[mCoinCycle] ? "UP" : ticker.last < mLastPrice[mCoinCycle] ? "DOWN" : "X_X"));
+                mLastPrice[mCoinCycle] = ticker.last;
                 mBuyPriceMin = (long) (Math.round(((float) ticker.last) * mBidPriceRange / divideUnit) * divideUnit);
-                mSellPriceMax = (long) (Math.round(((float) ticker.last) / (mBidPriceRange + 0.03) / divideUnit) * divideUnit);
+                mSellPriceMax = (long) (Math.round(((float) ticker.last) / (mBidPriceRange) / divideUnit) * divideUnit);
 
                 callBalance();
             }
@@ -313,20 +308,23 @@ public class PersistentService extends Service {
                 Collections.sort(mAsks);
                 Collections.sort(mBids, Collections.<Long>reverseOrder());
 
+                double coinAvail = mBalance.avail;
+                double krwAvail = mBalanceKrw.avail;
+
+
                 if (mBalance.avail < mSellAmount) {
-                    if (mBalanceKrw.avail < mLastPrice) {
-//                        callSellLimit(1000000L, 0.5);
-                    } else {
-                        for (long i = mBuyPriceMin; i < (long) (mLastPrice - divideUnit * 2); i = (long) (i + divideUnit)) {
+                    if (mBalanceKrw.avail >= mLastPrice[mCoinCycle]) {
+                        for (long i = mBuyPriceMin; i <= (long) (mLastPrice[mCoinCycle] - divideUnit); i = (long) (i + divideUnit)) {
                             /**
                              * bid(매수)에 가격이 없으므로 매수에 걸어야함
                              */
                             if (!mBids.contains(i)) {
                                 long price = (long) (Math.round(((float) i) * mPricePercent / divideUnit) * divideUnit);
-                                if (!mAsks.contains(price)) {
+                                if (!mAsks.contains(price) && krwAvail >= price) {
                                     /**
                                      * 매수를 price로 요청
                                      */
+                                    krwAvail -= price;
                                     callBuyLimit(i, mBuyAmount);
                                 }
                             }
@@ -338,26 +336,27 @@ public class PersistentService extends Service {
                      * 이 bid에 걸려있는지 확인
                      * 없으면 ask에 매도 주문
                      */
-                    for (long i = mSellPriceMax; i > (long) (mLastPrice + divideUnit * 2); i = (long) (i - divideUnit)) {
+                    for (long i = mSellPriceMax; i >= (long) (mLastPrice[mCoinCycle] + divideUnit); i = (long) (i - divideUnit)) {
                         if (!mAsks.contains(i)) {
                             long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
-                            if (!mBids.contains(price)) {
+                            if (!mBids.contains(price) && coinAvail >= mSellAmount) {
                                 /**
                                  * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
                                  */
                                 mAsks.add(i);
+                                coinAvail -= mSellAmount;
                                 callSellLimit(i, mSellAmount);
                             }
                         }
                     }
                 }
-                int lowPrice = (int) (Math.round(((float) mLastPrice) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
-                for (Order cancelOrder : mBidOrders) {
-                    if (cancelOrder.price < lowPrice) {
-                        callCancelLimit(cancelOrder);
-                        break;
-                    }
-                }
+//                int lowPrice = (int) (Math.round(((float) mLastPrice[mCoinCycle]) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
+//                for (Order cancelOrder : mBidOrders) {
+//                    if (cancelOrder.price < lowPrice) {
+//                        callCancelLimit(cancelOrder);
+//                        break;
+//                    }
+//                }
             }
 
             @Override
