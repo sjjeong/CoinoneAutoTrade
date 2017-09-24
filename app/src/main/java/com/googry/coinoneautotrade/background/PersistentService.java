@@ -313,14 +313,14 @@ public class PersistentService extends Service {
 
 
                 if (mBalance.avail < mSellAmount) {
-                    if (mBalanceKrw.avail >= mLastPrice[mCoinCycle]) {
+                    if (mBalanceKrw.avail >= mLastPrice[mCoinCycle] * mBuyAmount) {
                         for (long i = mBuyPriceMin; i <= (long) (mLastPrice[mCoinCycle] - divideUnit); i = (long) (i + divideUnit)) {
                             /**
                              * bid(매수)에 가격이 없으므로 매수에 걸어야함
                              */
                             if (!mBids.contains(i)) {
-                                long price = (long) (Math.round(((float) i) * mPricePercent / divideUnit) * divideUnit);
-                                if (!mAsks.contains(price) && krwAvail >= price) {
+                                long price = (long) (Math.ceil(((float) i) * mPricePercent / divideUnit) * divideUnit);
+                                if (!mAsks.contains(price) && krwAvail >= price * mBuyAmount) {
                                     /**
                                      * 매수를 price로 요청
                                      */
@@ -338,7 +338,7 @@ public class PersistentService extends Service {
                      */
                     for (long i = mSellPriceMax; i >= (long) (mLastPrice[mCoinCycle] + divideUnit); i = (long) (i - divideUnit)) {
                         if (!mAsks.contains(i)) {
-                            long price = (long) (Math.round(((float) i) / mPricePercent / divideUnit) * divideUnit);
+                            long price = (long) (Math.ceil(((float) i) / mPricePercent / divideUnit) * divideUnit);
                             if (!mBids.contains(price) && coinAvail >= mSellAmount) {
                                 /**
                                  * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
@@ -383,7 +383,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i(String.format("sell\t%,d\t\tamount ", price, sellAmount));
+                LogUtil.i(String.format("sell\t%,d\t\t%.4f amount ", price, sellAmount));
             }
 
             @Override
@@ -410,7 +410,7 @@ public class PersistentService extends Service {
         call.enqueue(new Callback<Void>() {
             @Override
             public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i(String.format("buy\t%,d\t\tamount ", price, buyAmount));
+                LogUtil.i(String.format("buy\t%,d\t\t%.4f amount ", price, buyAmount));
             }
 
             @Override
