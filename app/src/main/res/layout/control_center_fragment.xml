@@ -140,6 +140,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@{String.valueOf(control.pricePercent)}"
+                android:inputType="numberDecimal"
                 android:text="@{String.valueOf(control.pricePercent)}"/>
 
             <TextView
@@ -155,6 +156,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@{String.valueOf(control.bidPriceRange)}"
+                android:inputType="numberDecimal"
                 android:text="@{String.valueOf(control.bidPriceRange)}"/>
 
             <TextView
@@ -170,6 +172,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@{String.valueOf(control.buyAmount)}"
+                android:inputType="numberDecimal"
                 android:text="@{String.valueOf(control.buyAmount)}"/>
 
             <TextView
@@ -185,6 +188,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@{String.valueOf(control.sellAmount)}"
+                android:inputType="numberDecimal"
                 android:text="@{String.valueOf(control.sellAmount)}"/>
 
             <LinearLayout

@@ -34,7 +34,7 @@ import retrofit2.Response;
 
 public class PersistentService extends Service {
 
-    private static final int COUNT_DOWN_INTERVAL = 1000 * 3;
+    private static final int COUNT_DOWN_INTERVAL = 1000 * 5;
     private static final int MILLISINFUTURE = 86400 * 1000;
 
     private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
@@ -300,6 +300,10 @@ public class PersistentService extends Service {
                     if (order.type.equals("ask")) {
                         mAsks.add(order.price);
                     } else {
+                        if (mBids.contains(order.price)) {
+                            callCancelLimit(order);
+                            continue;
+                        }
                         mBids.add(order.price);
                         mBidOrders.add(order);
                     }
@@ -350,13 +354,13 @@ public class PersistentService extends Service {
                         }
                     }
                 }
-//                int lowPrice = (int) (Math.round(((float) mLastPrice[mCoinCycle]) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
-//                for (Order cancelOrder : mBidOrders) {
-//                    if (cancelOrder.price < lowPrice) {
-//                        callCancelLimit(cancelOrder);
-//                        break;
-//                    }
-//                }
+                int lowPrice = (int) (Math.round(((float) mLastPrice[mCoinCycle]) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
+                for (Order cancelOrder : mBidOrders) {
+                    if (cancelOrder.price < lowPrice) {
+                        callCancelLimit(cancelOrder);
+                        break;
+                    }
+                }
             }
 
             @Override

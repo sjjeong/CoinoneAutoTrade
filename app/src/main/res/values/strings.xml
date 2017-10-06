@@ -1,9 +1,5 @@
 <resources>
     <string name="app_name">CoinoneAutoTrade</string>
-    <string name="access_token">3020329f-8582-4bf7-a8b1-9c588edfc185</string>
-    <string name="secret_key">0848840b-d8a0-43f6-a7a9-161577d63524</string>
-
-
 
     <string name="krw">KRW</string>
     <string name="btc">BTC</string>
