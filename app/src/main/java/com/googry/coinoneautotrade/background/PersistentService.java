@@ -125,17 +125,17 @@ public class PersistentService extends Service {
                     switch (mCoinCycle) {
                         case 0: {
                             mCoinType = AutoBotControl.BTC;
-                            divideUnit = 500;
+                            divideUnit = 50000;
                         }
                         break;
                         case 1: {
                             mCoinType = AutoBotControl.BCH;
-                            divideUnit = 100;
+                            divideUnit = 5000;
                         }
                         break;
                         case 2: {
                             mCoinType = AutoBotControl.ETH;
-                            divideUnit = 50;
+                            divideUnit = 5000;
                         }
                         break;
                         case 3: {
@@ -255,6 +255,14 @@ public class PersistentService extends Service {
                     break;
                 }
                 mBalanceKrw = coinoneBalance.balanceKrw;
+                if (mBalance == null) {
+                    LogUtil.e("mBalance is null");
+                    return;
+                }
+                if (mBalanceKrw == null) {
+                    LogUtil.e("mBalanceKrw is null");
+                    return;
+                }
 
                 /**
                  * LimitOrders
@@ -289,6 +297,10 @@ public class PersistentService extends Service {
                 final CoinoneLimitOrder limitOrder = response.body();
                 if (limitOrder == null) {
                     LogUtil.e("limitorder is null");
+                    return;
+                }
+                if (limitOrder.limitOrders == null) {
+                    LogUtil.e("limitorder.limitOrders is null");
                     return;
                 }
 

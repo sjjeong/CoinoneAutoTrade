@@ -3,6 +3,9 @@
           package="com.googry.coinoneautotrade">
 
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.BOOT_COMPLETED"/>
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_SERVICE"/>
 
     <application
         android:name=".CoinoneAutoTradeApplication"
