@@ -1,31 +1,19 @@
 package com.googry.coinoneautotrade.background;
 
 import android.app.AlarmManager;
+import android.app.Notification;
 import android.app.PendingIntent;
 import android.app.Service;
-import android.content.Context;
 import android.content.Intent;
 import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.os.SystemClock;
 
 import com.googry.coinoneautotrade.Config;
-import com.googry.coinoneautotrade.data.CoinoneBalance;
-import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
-import com.googry.coinoneautotrade.data.CoinoneTicker;
-import com.googry.coinoneautotrade.data.Order;
 import com.googry.coinoneautotrade.data.realm.AutoBotControl;
-import com.googry.coinoneautotrade.data.remote.CoinoneApiManager;
-import com.googry.coinoneautotrade.util.EncryptionUtil;
 import com.googry.coinoneautotrade.util.LogUtil;
 
 import java.util.ArrayList;
-import java.util.Collections;
-
-import io.realm.Realm;
-import retrofit2.Call;
-import retrofit2.Callback;
-import retrofit2.Response;
 
 
 /**
@@ -34,62 +22,34 @@ import retrofit2.Response;
 
 public class PersistentService extends Service {
 
-    private static final int COUNT_DOWN_INTERVAL = 1000 * 5;
+    private static final int COUNT_DOWN_INTERVAL = 1000 * 3;
     private static final int MILLISINFUTURE = 86400 * 1000;
-
-    private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
-
-    private static final int COIN_TYPE_CNT = 6;
 
     private static int mCoinCycle;
 
     private CountDownTimer countDownTimer;
 
-    private Context mContext;
-
-    private String mCoinType;
-    private int mCallCnt;
-    private long mBuyPriceMin;
-    private long mSellPriceMax;
-    private double mBuyAmount;
-    private double mSellAmount;
-    private double mPricePercent;
-    private double divideUnit;
-    private float mBidPriceRange;
-    private long mLastPrice[] = new long[COIN_TYPE_CNT];
-
-    private CoinoneBalance.Balance mBalance;
-    private CoinoneBalance.Balance mBalanceKrw;
-
-    private CoinoneApiManager.CoinonePrivateApi mPrivateApi;
-    private CoinoneApiManager.CoinonePublicApi mPublicApi;
-
-    /**
-     * prices
-     */
-    private ArrayList<Long> mAsks = new ArrayList<>();
-    private ArrayList<Long> mBids = new ArrayList<>();
-    private ArrayList<Order> mBidOrders = new ArrayList<>();
-
-    private Realm mRealm;
+    private ArrayList<TradeRunner> mTradeRunners;
 
     @Override
     public void onCreate() {
         unregisterRestartAlarm();
         super.onCreate();
 
+
         initData();
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        startForeground(1, new Notification());
+        return super.onStartCommand(intent, flags, startId);
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
         countDownTimer.cancel();
-        if (mRealm != null) {
-            mRealm.close();
-            mRealm = null;
-        }
-
         /**
          * 서비스 종료 시 알람 등록을 통해 서비스 재 실행
          */
@@ -105,12 +65,14 @@ public class PersistentService extends Service {
      * 데이터 초기화
      */
     private void initData() {
-        mContext = this;
-        mRealm = Realm.getDefaultInstance();
         mCoinCycle = 0;
-
-        mPrivateApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
-        mPublicApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePublicApi.class);
+        mTradeRunners = new ArrayList<>();
+        mTradeRunners.add(new TradeRunner(AutoBotControl.BTC, Config.ACCESS_TOKEN_HOME_BTC, Config.SECRET_KEY_HOME_BTC));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.BCH, Config.ACCESS_TOKEN_HOME_BCH, Config.SECRET_KEY_HOME_BCH));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.ETH, Config.ACCESS_TOKEN_HOME_ETH, Config.SECRET_KEY_HOME_ETH));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.ETC, Config.ACCESS_TOKEN_HOME_ETC, Config.SECRET_KEY_HOME_ETC));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.XRP, Config.ACCESS_TOKEN_HOME_XRP, Config.SECRET_KEY_HOME_XRP));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.QTUM, Config.ACCESS_TOKEN_HOME_QTUM, Config.SECRET_KEY_HOME_QTUM));
 
         countDownTimer();
         countDownTimer.start();
@@ -120,63 +82,8 @@ public class PersistentService extends Service {
 
         countDownTimer = new CountDownTimer(MILLISINFUTURE, COUNT_DOWN_INTERVAL) {
             public void onTick(long millisUntilFinished) {
-                AutoBotControl control = null;
-                for (int i = 0; i < COIN_TYPE_CNT; i++) {
-                    switch (mCoinCycle) {
-                        case 0: {
-                            mCoinType = AutoBotControl.BTC;
-                            divideUnit = 50000;
-                        }
-                        break;
-                        case 1: {
-                            mCoinType = AutoBotControl.BCH;
-                            divideUnit = 5000;
-                        }
-                        break;
-                        case 2: {
-                            mCoinType = AutoBotControl.ETH;
-                            divideUnit = 5000;
-                        }
-                        break;
-                        case 3: {
-                            mCoinType = AutoBotControl.ETC;
-                            divideUnit = 10;
-                        }
-                        break;
-                        case 4: {
-                            mCoinType = AutoBotControl.XRP;
-                            divideUnit = 1;
-                        }
-                        break;
-                        case 5: {
-                            mCoinType = AutoBotControl.QTUM;
-                            divideUnit = 10;
-                        }
-                        break;
-                    }
-                    mCoinCycle = (mCoinCycle + 1) % COIN_TYPE_CNT;
-                    control = mRealm.where(AutoBotControl.class).equalTo("coinType", mCoinType).findFirst();
-                    if (control != null && control.runFlag)
-                        break;
-                }
-
-                LogUtil.i("----------------------------------------");
-                LogUtil.i("[ " + mCoinType + " ]");
-                if (control == null) {
-                    LogUtil.i("is null");
-                    return;
-                }
-                mCallCnt = 0;
-                mCoinType = control.coinType;
-                mBuyAmount = control.buyAmount;
-                mSellAmount = control.sellAmount;
-                mPricePercent = control.pricePercent;
-                mBidPriceRange = control.bidPriceRange;
-                /**
-                 * Ticker
-                 */
-                if (control.runFlag)
-                    callTicker();
+                mCoinCycle = (mCoinCycle + 1) % mTradeRunners.size();
+                mTradeRunners.get(mCoinCycle).run();
             }
 
             public void onFinish() {
@@ -184,286 +91,6 @@ public class PersistentService extends Service {
                 countDownTimer.start();
             }
         };
-    }
-
-    private void callTicker() {
-        Call<CoinoneTicker.Ticker> callTicker = mPublicApi.ticker(mCoinType);
-        callTicker.enqueue(new Callback<CoinoneTicker.Ticker>() {
-            @Override
-            public void onResponse(Call<CoinoneTicker.Ticker> call, Response<CoinoneTicker.Ticker> response) {
-                CoinoneTicker.Ticker ticker = response.body();
-                if (ticker == null) {
-                    LogUtil.e("ticker is null");
-                    return;
-                }
-                LogUtil.i(String.format("Price\t%,d\t\t %+d %s", ticker.last, ticker.last - mLastPrice[mCoinCycle],
-                        ticker.last > mLastPrice[mCoinCycle] ? "UP" : ticker.last < mLastPrice[mCoinCycle] ? "DOWN" : "X_X"));
-                mLastPrice[mCoinCycle] = ticker.last;
-                mBuyPriceMin = (long) (Math.round(((float) ticker.last) * mBidPriceRange / divideUnit) * divideUnit);
-                mSellPriceMax = (long) (Math.round(((float) ticker.last) / (mBidPriceRange) / divideUnit) * divideUnit);
-
-                callBalance();
-            }
-
-            @Override
-            public void onFailure(Call<CoinoneTicker.Ticker> call, Throwable t) {
-            }
-        });
-    }
-
-    private void callBalance() {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
-            return;
-        mCallCnt++;
-
-        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
-        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
-        Call<CoinoneBalance> callBalance = mPrivateApi.balance(
-                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
-        callBalance.enqueue(new Callback<CoinoneBalance>() {
-            @Override
-            public void onResponse(Call<CoinoneBalance> call, Response<CoinoneBalance> response) {
-                if (response.body() == null)
-                    return;
-                CoinoneBalance coinoneBalance = response.body();
-                switch (mCoinType) {
-                    case AutoBotControl.BTC: {
-                        mBalance = coinoneBalance.balanceBtc;
-                    }
-                    break;
-                    case AutoBotControl.BCH: {
-                        mBalance = coinoneBalance.balanceBch;
-                    }
-                    break;
-                    case AutoBotControl.ETH: {
-                        mBalance = coinoneBalance.balanceEth;
-                    }
-                    break;
-                    case AutoBotControl.ETC: {
-                        mBalance = coinoneBalance.balanceEtc;
-                    }
-                    break;
-                    case AutoBotControl.XRP: {
-                        mBalance = coinoneBalance.balanceXrp;
-                    }
-                    break;
-                    case AutoBotControl.QTUM: {
-                        mBalance = coinoneBalance.balanceQtum;
-                    }
-                    break;
-                }
-                mBalanceKrw = coinoneBalance.balanceKrw;
-                if (mBalance == null) {
-                    LogUtil.e("mBalance is null");
-                    return;
-                }
-                if (mBalanceKrw == null) {
-                    LogUtil.e("mBalanceKrw is null");
-                    return;
-                }
-
-                /**
-                 * LimitOrders
-                 */
-                callLimitOrders();
-
-            }
-
-
-            @Override
-            public void onFailure(Call<CoinoneBalance> call, Throwable t) {
-
-            }
-        });
-    }
-
-    private void callLimitOrders() {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
-            return;
-        mCallCnt++;
-
-        String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
-        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
-        Call<CoinoneLimitOrder> callLimitOrders = mPrivateApi.limitOrders(
-                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
-
-        callLimitOrders.enqueue(new Callback<CoinoneLimitOrder>() {
-            @Override
-            public void onResponse(Call<CoinoneLimitOrder> call, Response<CoinoneLimitOrder> response) {
-                final CoinoneLimitOrder limitOrder = response.body();
-                if (limitOrder == null) {
-                    LogUtil.e("limitorder is null");
-                    return;
-                }
-                if (limitOrder.limitOrders == null) {
-                    LogUtil.e("limitorder.limitOrders is null");
-                    return;
-                }
-
-                mAsks.clear();
-                mBids.clear();
-                mBidOrders.clear();
-
-                for (Order order : limitOrder.limitOrders) {
-                    if (order.type.equals("ask")) {
-                        mAsks.add(order.price);
-                    } else {
-                        if (mBids.contains(order.price)) {
-                            callCancelLimit(order);
-                            continue;
-                        }
-                        mBids.add(order.price);
-                        mBidOrders.add(order);
-                    }
-                }
-
-                Collections.sort(mAsks);
-                Collections.sort(mBids, Collections.<Long>reverseOrder());
-
-                double coinAvail = mBalance.avail;
-                double krwAvail = mBalanceKrw.avail;
-
-
-                if (mBalance.avail < mSellAmount) {
-                    if (mBalanceKrw.avail >= mLastPrice[mCoinCycle] * mBuyAmount) {
-                        for (long i = mBuyPriceMin; i <= (long) (mLastPrice[mCoinCycle] - divideUnit); i = (long) (i + divideUnit)) {
-                            /**
-                             * bid(매수)에 가격이 없으므로 매수에 걸어야함
-                             */
-                            if (!mBids.contains(i)) {
-                                long price = (long) (Math.ceil(((float) i) * mPricePercent / divideUnit) * divideUnit);
-                                if (!mAsks.contains(price) && krwAvail >= price * mBuyAmount) {
-                                    /**
-                                     * 매수를 price로 요청
-                                     */
-                                    krwAvail -= price;
-                                    callBuyLimit(i, mBuyAmount);
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    /**
-                     * Ticker.last +
-                     * 이 bid에 걸려있는지 확인
-                     * 없으면 ask에 매도 주문
-                     */
-                    for (long i = mSellPriceMax; i >= (long) (mLastPrice[mCoinCycle] + divideUnit); i = (long) (i - divideUnit)) {
-                        if (!mAsks.contains(i)) {
-                            long price = (long) (Math.ceil(((float) i) / mPricePercent / divideUnit) * divideUnit);
-                            if (!mBids.contains(price) && coinAvail >= mSellAmount) {
-                                /**
-                                 * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
-                                 */
-                                mAsks.add(i);
-                                coinAvail -= mSellAmount;
-                                callSellLimit(i, mSellAmount);
-                            }
-                        }
-                    }
-                }
-                int lowPrice = (int) (Math.round(((float) mLastPrice[mCoinCycle]) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
-                for (Order cancelOrder : mBidOrders) {
-                    if (cancelOrder.price < lowPrice) {
-                        callCancelLimit(cancelOrder);
-                        break;
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<CoinoneLimitOrder> call, Throwable t) {
-            }
-        });
-    }
-
-
-    private void callSellLimit(final long price, final double sellAmount) {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
-            return;
-        mCallCnt++;
-
-        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
-                price,
-                sellAmount,
-                mCoinType,
-                System.currentTimeMillis());
-        String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
-        String signature = EncryptionUtil.getSignature(Config.SECRET_KEY, encyptOrderBuyPayload);
-
-        Call<Void> call = mPrivateApi.buysell("sell", encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
-        call.enqueue(new Callback<Void>() {
-            @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i(String.format("sell\t%,d\t\t%.4f amount ", price, sellAmount));
-            }
-
-            @Override
-            public void onFailure(Call<Void> call, Throwable t) {
-            }
-        });
-
-    }
-
-    private void callBuyLimit(final long price, final double buyAmount) {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
-            return;
-        mCallCnt++;
-
-        String orderBuyPayload = EncryptionUtil.getJsonOrderBuy(Config.ACCESS_TOKEN,
-                price,
-                buyAmount,
-                mCoinType,
-                System.currentTimeMillis());
-        String encyptOrderBuyPayload = EncryptionUtil.getEncyptPayload(orderBuyPayload);
-        String signature = EncryptionUtil.getSignature(Config.SECRET_KEY, encyptOrderBuyPayload);
-
-        Call<Void> call = mPrivateApi.buysell("buy", encyptOrderBuyPayload, signature, encyptOrderBuyPayload);
-        call.enqueue(new Callback<Void>() {
-            @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i(String.format("buy\t%,d\t\t%.4f amount ", price, buyAmount));
-            }
-
-            @Override
-            public void onFailure(Call<Void> call, Throwable t) {
-            }
-        });
-
-    }
-
-    private void callCancelLimit(final Order cancelOrder) {
-        if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
-            return;
-        mCallCnt++;
-
-        String limitOrdersPayload = EncryptionUtil.getJsonCancelOrder(
-                Config.ACCESS_TOKEN,
-                cancelOrder.orderId,
-                cancelOrder.price,
-                cancelOrder.qty,
-                0,
-                mCoinType,
-                System.currentTimeMillis());
-        String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
-        Call<Void> call = mPrivateApi.cancelOrder(
-                encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
-        );
-        call.enqueue(new Callback<Void>() {
-            @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                LogUtil.i(String.format("cancel\t%,d ", cancelOrder.price));
-            }
-
-            @Override
-            public void onFailure(Call<Void> call, Throwable t) {
-            }
-        });
     }
 
 

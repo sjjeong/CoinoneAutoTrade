@@ -81,9 +81,9 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
 
     private void callBalance() {
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN_HOME, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY_HOME, encryptlimitOrdersPayload);
         Call<CoinoneBalance> callBalance = mPrivateApi.balance(
                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
         callBalance.enqueue(new Callback<CoinoneBalance>() {
@@ -140,9 +140,9 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
         LogUtil.i("bidClear");
         mView.showDialog("매수 정리 중...");
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN_HOME, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY_HOME, encryptlimitOrdersPayload);
         Call<CoinoneLimitOrder> completeOrderCall = mPrivateApi.limitOrders(
                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
         );
@@ -170,9 +170,9 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
         mView.showDialog("매도 정리 중...");
 
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN_HOME, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY_HOME, encryptlimitOrdersPayload);
         Call<CoinoneLimitOrder> completeOrderCall = mPrivateApi.limitOrders(
                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
         );
@@ -210,18 +210,22 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
 
     @Override
     public void requestRun(final float pricePercent,
+                           final float askPriceRange,
                            final float bidPriceRange,
                            final double buyAmount,
-                           final double sellAmount) {
+                           final double sellAmount,
+                           final int divideUnit) {
 
         mRealm.executeTransaction(new Realm.Transaction() {
             @Override
             public void execute(Realm realm) {
                 mAutoBotControl.runFlag = true;
                 mAutoBotControl.pricePercent = pricePercent;
+                mAutoBotControl.askPriceRange = askPriceRange;
                 mAutoBotControl.bidPriceRange = bidPriceRange;
                 mAutoBotControl.buyAmount = buyAmount;
                 mAutoBotControl.sellAmount = sellAmount;
+                mAutoBotControl.divideUnit = divideUnit;
                 realm.copyToRealmOrUpdate(mAutoBotControl);
                 mView.showRunning(mAutoBotControl.runFlag);
             }
@@ -233,12 +237,12 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
             @Override
             public void run() {
                 for (Order cancelOrder : order) {
-                    if ( ( (cancelOrder.type.equals("bid") && isAsk == ASK) ||
-                            (cancelOrder.type.equals("ask") && isAsk == BID) ) )
+                    if (((cancelOrder.type.equals("bid") && isAsk == ASK) ||
+                            (cancelOrder.type.equals("ask") && isAsk == BID)))
                         continue;
                     try {
                         String limitOrdersPayload = EncryptionUtil.getJsonCancelOrder(
-                                Config.ACCESS_TOKEN,
+                                Config.ACCESS_TOKEN_HOME,
                                 cancelOrder.orderId,
                                 cancelOrder.price,
                                 cancelOrder.qty,
@@ -246,7 +250,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
                                 mCoinType,
                                 System.currentTimeMillis());
                         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-                        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
+                        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY_HOME, encryptlimitOrdersPayload);
                         Call<Void> call = mPrivateApi.cancelOrder(
                                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
                         );

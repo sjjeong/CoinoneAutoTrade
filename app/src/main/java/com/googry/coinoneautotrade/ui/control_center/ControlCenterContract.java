@@ -17,9 +17,11 @@ public interface ControlCenterContract {
         void requestStop();
 
         void requestRun(float pricePercent,
+                        float askPriceRange,
                         float bidPriceRange,
                         double buyAmount,
-                        double sellAmount);
+                        double sellAmount,
+                        int divideUnit);
     }
 
     interface View extends BaseView<Presenter> {

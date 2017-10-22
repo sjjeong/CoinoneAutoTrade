@@ -113,9 +113,11 @@ public class ControlCenterFragment
     public void prepareRun() {
         mPresenter.requestRun(
                 Float.valueOf(mBinding.etPricePercent.getText().toString()),
+                Float.valueOf(mBinding.etAskPriceRange.getText().toString()),
                 Float.valueOf(mBinding.etBidPriceRange.getText().toString()),
                 Double.valueOf(mBinding.etBuyAmount.getText().toString()),
-                Double.valueOf(mBinding.etSellAmout.getText().toString())
+                Double.valueOf(mBinding.etSellAmout.getText().toString()),
+                Integer.valueOf(mBinding.etDivideUnit.getText().toString())
         );
     }
 }
