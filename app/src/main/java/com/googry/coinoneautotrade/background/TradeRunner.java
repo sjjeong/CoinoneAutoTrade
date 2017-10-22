@@ -65,14 +65,14 @@ public class TradeRunner {
         this.mSecretKey = secretKey;
     }
 
-    public void run() {
+    public boolean run() {
         AutoBotControl control = mRealm.where(AutoBotControl.class).equalTo("coinType", mCoinType).findFirst();
 
         LogUtil.i("----------------------------------------");
         LogUtil.i("[ " + mCoinType + " ]");
         if (control == null) {
             LogUtil.i("is null");
-            return;
+            return false;
         }
 
         mCallCnt = 0;
@@ -87,8 +87,10 @@ public class TradeRunner {
         /**
          * Ticker
          */
-        if (control.runFlag)
-            callTicker();
+        if (!control.runFlag)
+            return false;
+        callTicker();
+        return true;
     }
 
     private void callTicker() {
@@ -271,13 +273,13 @@ public class TradeRunner {
                         }
                     }
                 }
-                int lowPrice = (int) (Math.round(((float) mLastPrice) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
-                for (Order cancelOrder : mBidOrders) {
-                    if (cancelOrder.price < lowPrice) {
-                        callCancelLimit(cancelOrder);
-                        break;
-                    }
-                }
+//                int lowPrice = (int) (Math.round(((float) mLastPrice) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
+//                for (Order cancelOrder : mBidOrders) {
+//                    if (cancelOrder.price < lowPrice) {
+//                        callCancelLimit(cancelOrder);
+//                        break;
+//                    }
+//                }
             }
 
             @Override

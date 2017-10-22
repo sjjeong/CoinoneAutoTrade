@@ -82,8 +82,11 @@ public class PersistentService extends Service {
 
         countDownTimer = new CountDownTimer(MILLISINFUTURE, COUNT_DOWN_INTERVAL) {
             public void onTick(long millisUntilFinished) {
-                mCoinCycle = (mCoinCycle + 1) % mTradeRunners.size();
-                mTradeRunners.get(mCoinCycle).run();
+                for (int i = 0; i < mTradeRunners.size(); i++) {
+                    mCoinCycle = (mCoinCycle + 1) % mTradeRunners.size();
+                    if(mTradeRunners.get(mCoinCycle).run())
+                        break;
+                }
             }
 
             public void onFinish() {
