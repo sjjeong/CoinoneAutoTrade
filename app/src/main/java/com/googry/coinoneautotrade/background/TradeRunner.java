@@ -236,20 +236,18 @@ public class TradeRunner {
 
 
                 if (mBalance.avail < mSellAmount) {
-                    if (mBalanceKrw.avail >= mLastPrice * mBuyAmount) {
-                        for (long i = mBuyPriceMin; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
-                            /**
-                             * bid(매수)에 가격이 없으므로 매수에 걸어야함
-                             */
-                            if (!mBids.contains(i)) {
-                                long price = (long) (Math.ceil(((float) i) * mPricePercent / divideUnit) * divideUnit);
-                                if (!mAsks.contains(price) && krwAvail >= price * mBuyAmount) {
-                                    /**
-                                     * 매수를 price로 요청
-                                     */
-                                    krwAvail -= price;
-                                    callBuyLimit(i, mBuyAmount);
-                                }
+                    for (long i = mBuyPriceMin + (long) divideUnit; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
+                        /**
+                         * bid(매수)에 가격이 없으므로 매수에 걸어야함
+                         */
+                        if (!mBids.contains(i)) {
+                            long price = (long) (Math.ceil(((float) i) * mPricePercent / divideUnit) * divideUnit);
+                            if (!mAsks.contains(price) && krwAvail >= price * mBuyAmount) {
+                                /**
+                                 * 매수를 price로 요청
+                                 */
+                                krwAvail -= price * mBuyAmount;
+                                callBuyLimit(i, mBuyAmount);
                             }
                         }
                     }

@@ -31,8 +31,8 @@ public class MainActivity extends AppCompatActivity {
         mBinding = DataBindingUtil.setContentView(this, R.layout.main_activity);
         mBinding.setActivity(this);
 
-        secretKey = Config.SECRET_KEY_HOME;
-        accessToken = Config.ACCESS_TOKEN_HOME;
+        secretKey = Config.SECRET_KEY;
+        accessToken = Config.ACCESS_TOKEN;
 
         long nonce = System.currentTimeMillis();
         String balancePayload = EncryptionUtil.getJsonBalance(accessToken, nonce);

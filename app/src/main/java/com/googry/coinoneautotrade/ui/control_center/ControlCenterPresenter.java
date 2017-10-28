@@ -81,9 +81,9 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
 
     private void callBalance() {
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN_HOME, mCoinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY_HOME, encryptlimitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
         Call<CoinoneBalance> callBalance = mPrivateApi.balance(
                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload);
         callBalance.enqueue(new Callback<CoinoneBalance>() {
@@ -140,9 +140,9 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
         LogUtil.i("bidClear");
         mView.showDialog("매수 정리 중...");
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN_HOME, mCoinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY_HOME, encryptlimitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
         Call<CoinoneLimitOrder> completeOrderCall = mPrivateApi.limitOrders(
                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
         );
@@ -170,9 +170,9 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
         mView.showDialog("매도 정리 중...");
 
         String limitOrdersPayload = EncryptionUtil.getJsonLimitOrders(
-                Config.ACCESS_TOKEN_HOME, mCoinType, System.currentTimeMillis());
+                Config.ACCESS_TOKEN, mCoinType, System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY_HOME, encryptlimitOrdersPayload);
+        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
         Call<CoinoneLimitOrder> completeOrderCall = mPrivateApi.limitOrders(
                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
         );
@@ -242,7 +242,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
                         continue;
                     try {
                         String limitOrdersPayload = EncryptionUtil.getJsonCancelOrder(
-                                Config.ACCESS_TOKEN_HOME,
+                                Config.ACCESS_TOKEN,
                                 cancelOrder.orderId,
                                 cancelOrder.price,
                                 cancelOrder.qty,
@@ -250,7 +250,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
                                 mCoinType,
                                 System.currentTimeMillis());
                         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
-                        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY_HOME, encryptlimitOrdersPayload);
+                        String limitOrdersSignature = EncryptionUtil.getSignature(Config.SECRET_KEY, encryptlimitOrdersPayload);
                         Call<Void> call = mPrivateApi.cancelOrder(
                                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
                         );

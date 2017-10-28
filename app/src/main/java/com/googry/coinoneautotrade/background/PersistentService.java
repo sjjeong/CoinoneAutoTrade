@@ -22,7 +22,7 @@ import java.util.ArrayList;
 
 public class PersistentService extends Service {
 
-    private static final int COUNT_DOWN_INTERVAL = 1000 * 3;
+    private static final int COUNT_DOWN_INTERVAL = 1000 * 5;
     private static final int MILLISINFUTURE = 86400 * 1000;
 
     private static int mCoinCycle;
@@ -67,12 +67,12 @@ public class PersistentService extends Service {
     private void initData() {
         mCoinCycle = 0;
         mTradeRunners = new ArrayList<>();
-        mTradeRunners.add(new TradeRunner(AutoBotControl.BTC, Config.ACCESS_TOKEN_HOME_BTC, Config.SECRET_KEY_HOME_BTC));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.BCH, Config.ACCESS_TOKEN_HOME_BCH, Config.SECRET_KEY_HOME_BCH));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.ETH, Config.ACCESS_TOKEN_HOME_ETH, Config.SECRET_KEY_HOME_ETH));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.ETC, Config.ACCESS_TOKEN_HOME_ETC, Config.SECRET_KEY_HOME_ETC));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.XRP, Config.ACCESS_TOKEN_HOME_XRP, Config.SECRET_KEY_HOME_XRP));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.QTUM, Config.ACCESS_TOKEN_HOME_QTUM, Config.SECRET_KEY_HOME_QTUM));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.BTC, Config.ACCESS_TOKEN, Config.SECRET_KEY));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.BCH, Config.ACCESS_TOKEN, Config.SECRET_KEY));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.ETH, Config.ACCESS_TOKEN, Config.SECRET_KEY));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.ETC, Config.ACCESS_TOKEN, Config.SECRET_KEY));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.XRP, Config.ACCESS_TOKEN, Config.SECRET_KEY));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.QTUM, Config.ACCESS_TOKEN, Config.SECRET_KEY));
 
         countDownTimer();
         countDownTimer.start();
