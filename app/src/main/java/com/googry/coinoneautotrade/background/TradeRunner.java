@@ -36,6 +36,7 @@ public class TradeRunner {
     private float mBidPriceRange;
     private float mAskPriceRange;
     private long mLastPrice;
+    private CoinoneTicker.Ticker mTicker;
 
     private CoinoneBalance.Balance mBalance;
     private CoinoneBalance.Balance mBalanceKrw;
@@ -109,6 +110,7 @@ public class TradeRunner {
                 mBuyPriceMin = (long) (Math.round(((float) ticker.last) * mBidPriceRange / divideUnit) * divideUnit);
                 mSellPriceMax = (long) (Math.round(((float) ticker.last) * mAskPriceRange / divideUnit) * divideUnit);
 
+                mTicker = ticker;
                 callBalance();
             }
 
@@ -236,18 +238,22 @@ public class TradeRunner {
 
 
                 if (mBalance.avail < mSellAmount) {
-                    for (long i = mBuyPriceMin + (long) divideUnit; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
-                        /**
-                         * bid(매수)에 가격이 없으므로 매수에 걸어야함
-                         */
-                        if (!mBids.contains(i)) {
-                            long price = (long) (Math.ceil(((float) i) * mPricePercent / divideUnit) * divideUnit);
-                            if (!mAsks.contains(price) && krwAvail >= price * mBuyAmount) {
-                                /**
-                                 * 매수를 price로 요청
-                                 */
-                                krwAvail -= price * mBuyAmount;
-                                callBuyLimit(i, mBuyAmount);
+                    double percent = 100 * (mTicker.last - mTicker.low) / (double) mTicker.last;
+                    LogUtil.e(String.format("%.2f", percent));
+                    if (percent < 5f) {
+                        for (long i = mBuyPriceMin + (long) divideUnit; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
+                            /**
+                             * bid(매수)에 가격이 없으므로 매수에 걸어야함
+                             */
+                            if (!mBids.contains(i)) {
+                                long price = (long) (Math.ceil(((float) i) * mPricePercent / divideUnit) * divideUnit);
+                                if (!mAsks.contains(price) && krwAvail >= price * mBuyAmount) {
+                                    /**
+                                     * 매수를 price로 요청
+                                     */
+                                    krwAvail -= price * mBuyAmount;
+                                    callBuyLimit(i, mBuyAmount);
+                                }
                             }
                         }
                     }
