@@ -19,6 +19,7 @@ public class AutoBotControl extends RealmObject {
     public static final String ETC = "etc";
     public static final String XRP = "xrp";
     public static final String QTUM = "qtum";
+    public static final String LTC = "ltc";
     @PrimaryKey
     public String coinType;
 
@@ -59,44 +60,68 @@ public class AutoBotControl extends RealmObject {
     public AutoBotControl(String coinType) {
         this.coinType = coinType;
         this.runFlag = false;
-        pricePercent = 1.01f;
-        askPriceRange = 1.1f;
-        bidPriceRange = 0.95f;
         switch (coinType) {
             case BTC:{
-                buyAmount = Double.valueOf("1");
-                sellAmount = Double.valueOf("0.999");
-                divideUnit = 500;
+                pricePercent = 1.1f;
+                askPriceRange = 1.15f;
+                bidPriceRange = 0.975f;
+                buyAmount = Double.valueOf("0.0015");
+                sellAmount = Double.valueOf("0.0014");
+                divideUnit = 100000;
             }
             break;
             case BCH:{
-                buyAmount = Double.valueOf("1");
-                sellAmount = Double.valueOf("0.999");
-                divideUnit = 100;
+                pricePercent = 1.02f;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.975f;
+                buyAmount = Double.valueOf("0.011");
+                sellAmount = Double.valueOf("0.0109");
+                divideUnit = 500;
             }
             break;
             case ETH:{
-                buyAmount = Double.valueOf("1");
-                sellAmount = Double.valueOf("0.999");
-                divideUnit = 50;
-            }
-            break;
-            case XRP:{
-                buyAmount = Double.valueOf("10");
-                sellAmount = Double.valueOf("9.99");
-                divideUnit = 1;
+                pricePercent = 1.02f;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.975f;
+                buyAmount = Double.valueOf("0.011");
+                sellAmount = Double.valueOf("0.0109");
+                divideUnit = 500;
             }
             break;
             case ETC:{
-                buyAmount = Double.valueOf("1");
-                sellAmount = Double.valueOf("0.999");
+                pricePercent = 1.01f;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.975f;
+                buyAmount = Double.valueOf("0.2");
+                sellAmount = Double.valueOf("0.1998");
                 divideUnit = 10;
             }
             break;
+            case XRP:{
+                pricePercent = 1.01f;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.975f;
+                buyAmount = Double.valueOf("10");
+                sellAmount = Double.valueOf("9.992");
+                divideUnit = 1;
+            }
+            break;
             case QTUM:{
-                buyAmount = Double.valueOf("1");
-                sellAmount = Double.valueOf("0.999");
+                pricePercent = 1.01f;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.975f;
+                buyAmount = Double.valueOf("0.2");
+                sellAmount = Double.valueOf("0.1998");
                 divideUnit = 10;
+            }
+            break;
+            case LTC:{
+                pricePercent = 1.01f;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.975f;
+                buyAmount = Double.valueOf("0.11");
+                sellAmount = Double.valueOf("0.1099");
+                divideUnit = 500;
             }
             break;
         }

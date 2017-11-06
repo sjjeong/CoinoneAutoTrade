@@ -256,9 +256,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
                         );
                         call.execute();
                         Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    } catch (IOException e) {
+                    } catch (InterruptedException | IOException e) {
                         e.printStackTrace();
                     }
                 }

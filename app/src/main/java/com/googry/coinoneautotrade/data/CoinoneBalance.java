@@ -19,6 +19,8 @@ public class CoinoneBalance {
     public Balance balanceQtum;
     @SerializedName("bch")
     public Balance balanceBch;
+    @SerializedName("ltc")
+    public Balance balanceLtc;
     @SerializedName("krw")
     public Balance balanceKrw;
 

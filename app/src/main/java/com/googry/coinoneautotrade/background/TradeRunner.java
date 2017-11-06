@@ -162,6 +162,10 @@ public class TradeRunner {
                         mBalance = coinoneBalance.balanceQtum;
                     }
                     break;
+                    case AutoBotControl.LTC: {
+                        mBalance = coinoneBalance.balanceLtc;
+                    }
+                    break;
                 }
                 mBalanceKrw = coinoneBalance.balanceKrw;
                 if (mBalance == null) {
@@ -238,10 +242,10 @@ public class TradeRunner {
 
 
                 if (mBalance.avail < mSellAmount) {
-                    double percent = 100 * (mTicker.last - mTicker.low) / (double) mTicker.last;
+                    double percent = 100 * (mTicker.last - mTicker.low) / (double) mTicker.low;
                     LogUtil.e(String.format("%.2f", percent));
-                    if (percent < 5f) {
-                        for (long i = mBuyPriceMin + (long) divideUnit; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
+                    if (percent < 10f) {
+                        for (long i = mBuyPriceMin; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
                             /**
                              * bid(매수)에 가격이 없으므로 매수에 걸어야함
                              */

@@ -84,6 +84,10 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.QTUM);
             }
             break;
+            case R.id.ll_ltc:{
+                intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.LTC);
+            }
+            break;
         }
         startActivity(intent);
 
