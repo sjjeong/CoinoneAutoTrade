@@ -240,11 +240,15 @@ public class TradeRunner {
                 double coinAvail = mBalance.avail;
                 double krwAvail = mBalanceKrw.avail;
 
+                double lowPercent = (mTicker.last) / (double) mTicker.low;
+                double highPercent = (mTicker.high) / (double) mTicker.last;
+
+                LogUtil.e(String.format("low %.2f\t high %.2f", lowPercent, highPercent));
+                LogUtil.e(String.format("buy %.2f\t  ask %.2f", mPricePercent, mAskPriceRange));
+                LogUtil.e(String.format("%s\t\t%s", mPricePercent > lowPercent, mAskPriceRange < highPercent));
 
                 if (mBalance.avail < mSellAmount) {
-                    double percent = 100 * (mTicker.last - mTicker.low) / (double) mTicker.low;
-                    LogUtil.e(String.format("%.2f", percent));
-                    if (percent < 10f) {
+                    if ((mPricePercent > lowPercent) || (mAskPriceRange < highPercent)) {
                         for (long i = mBuyPriceMin; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
                             /**
                              * bid(매수)에 가격이 없으므로 매수에 걸어야함
@@ -281,13 +285,13 @@ public class TradeRunner {
                         }
                     }
                 }
-//                int lowPrice = (int) (Math.round(((float) mLastPrice) * mBidPriceRange * 0.99f / divideUnit) * divideUnit);
-//                for (Order cancelOrder : mBidOrders) {
-//                    if (cancelOrder.price < lowPrice) {
-//                        callCancelLimit(cancelOrder);
-//                        break;
-//                    }
-//                }
+                int lowPrice = (int) (Math.round(((float) mLastPrice) * Math.pow(mBidPriceRange, 2) / divideUnit) * divideUnit);
+                for (Order cancelOrder : mBidOrders) {
+                    if (cancelOrder.price < lowPrice) {
+                        callCancelLimit(cancelOrder);
+                        break;
+                    }
+                }
             }
 
             @Override
