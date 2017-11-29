@@ -88,6 +88,10 @@ public class MainActivity extends AppCompatActivity {
                 intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.LTC);
             }
             break;
+            case R.id.ll_iota:{
+                intent.putExtra(ControlCenterActivity.EXTRA_COIN_TYPE, AutoBotControl.IOTA);
+            }
+            break;
         }
         startActivity(intent);
 

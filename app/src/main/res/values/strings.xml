@@ -9,6 +9,7 @@
     <string name="xrp">XRP</string>
     <string name="qtum">QTUM</string>
     <string name="ltc">LTC</string>
+    <string name="iota">IOTA</string>
 
     <string name="avail">거래가능</string>
     <string name="balance">보류량</string>

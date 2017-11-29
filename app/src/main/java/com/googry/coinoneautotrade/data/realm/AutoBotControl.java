@@ -20,6 +20,7 @@ public class AutoBotControl extends RealmObject {
     public static final String XRP = "xrp";
     public static final String QTUM = "qtum";
     public static final String LTC = "ltc";
+    public static final String IOTA = "iota";
     @PrimaryKey
     public String coinType;
 
@@ -62,7 +63,7 @@ public class AutoBotControl extends RealmObject {
         this.runFlag = false;
         switch (coinType) {
             case BTC:{
-                pricePercent = 1.1f;
+                pricePercent = 1.05f;
                 askPriceRange = 1.15f;
                 bidPriceRange = 0.975f;
                 buyAmount = Double.valueOf("0.0015");
@@ -71,7 +72,7 @@ public class AutoBotControl extends RealmObject {
             }
             break;
             case BCH:{
-                pricePercent = 1.02f;
+                pricePercent = 1.05f;
                 askPriceRange = 1.1f;
                 bidPriceRange = 0.975f;
                 buyAmount = Double.valueOf("0.011");
@@ -80,7 +81,7 @@ public class AutoBotControl extends RealmObject {
             }
             break;
             case ETH:{
-                pricePercent = 1.02f;
+                pricePercent = 1.05f;
                 askPriceRange = 1.1f;
                 bidPriceRange = 0.975f;
                 buyAmount = Double.valueOf("0.011");
@@ -89,7 +90,7 @@ public class AutoBotControl extends RealmObject {
             }
             break;
             case ETC:{
-                pricePercent = 1.01f;
+                pricePercent = 1.05f;
                 askPriceRange = 1.1f;
                 bidPriceRange = 0.975f;
                 buyAmount = Double.valueOf("0.2");
@@ -98,7 +99,7 @@ public class AutoBotControl extends RealmObject {
             }
             break;
             case XRP:{
-                pricePercent = 1.01f;
+                pricePercent = 1.05f;
                 askPriceRange = 1.1f;
                 bidPriceRange = 0.975f;
                 buyAmount = Double.valueOf("10");
@@ -107,7 +108,7 @@ public class AutoBotControl extends RealmObject {
             }
             break;
             case QTUM:{
-                pricePercent = 1.01f;
+                pricePercent = 1.05f;
                 askPriceRange = 1.1f;
                 bidPriceRange = 0.975f;
                 buyAmount = Double.valueOf("0.2");
@@ -116,12 +117,21 @@ public class AutoBotControl extends RealmObject {
             }
             break;
             case LTC:{
-                pricePercent = 1.01f;
+                pricePercent = 1.05f;
                 askPriceRange = 1.1f;
                 bidPriceRange = 0.975f;
                 buyAmount = Double.valueOf("0.11");
                 sellAmount = Double.valueOf("0.1099");
                 divideUnit = 500;
+            }
+            break;
+            case IOTA:{
+                pricePercent = 1.05f;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.975f;
+                buyAmount = Double.valueOf("1");
+                sellAmount = Double.valueOf("1");
+                divideUnit = 1;
             }
             break;
         }

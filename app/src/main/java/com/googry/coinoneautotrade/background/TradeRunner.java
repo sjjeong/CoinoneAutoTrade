@@ -166,6 +166,10 @@ public class TradeRunner {
                         mBalance = coinoneBalance.balanceLtc;
                     }
                     break;
+                    case AutoBotControl.IOTA: {
+                        mBalance = coinoneBalance.balanceIota;
+                    }
+                    break;
                 }
                 mBalanceKrw = coinoneBalance.balanceKrw;
                 if (mBalance == null) {
@@ -248,7 +252,8 @@ public class TradeRunner {
                 LogUtil.e(String.format("%s\t\t%s", mPricePercent > lowPercent, mAskPriceRange < highPercent));
 
                 if (mBalance.avail < mSellAmount) {
-                    if ((mPricePercent > lowPercent) || (mAskPriceRange < highPercent)) {
+                    if (true) {
+//                    if ((mPricePercent > lowPercent) || (mAskPriceRange < highPercent)) {
                         for (long i = mBuyPriceMin; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
                             /**
                              * bid(매수)에 가격이 없으므로 매수에 걸어야함
