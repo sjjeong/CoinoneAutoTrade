@@ -56,7 +56,9 @@ public class TradeRunner {
 
     private Realm mRealm;
 
-    public TradeRunner(String coinType, String accessToken, String secretKey) {
+    private PersistentService.OnNoWorkingEventListener mOnNoWorkingEventListener;
+
+    public TradeRunner(String coinType, String accessToken, String secretKey, PersistentService.OnNoWorkingEventListener onNoWorkingEventListener) {
         mCoinType = coinType;
         mPrivateApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePrivateApi.class);
         mPublicApi = CoinoneApiManager.getApiManager().create(CoinoneApiManager.CoinonePublicApi.class);
@@ -64,6 +66,8 @@ public class TradeRunner {
 
         this.mAccessToken = accessToken;
         this.mSecretKey = secretKey;
+
+        mOnNoWorkingEventListener = onNoWorkingEventListener;
     }
 
     public boolean run() {
@@ -252,8 +256,10 @@ public class TradeRunner {
                 LogUtil.e(String.format("%s\t\t%s", mPricePercent > lowPercent, mAskPriceRange < highPercent));
 
                 if (mBalance.avail < mSellAmount) {
-                    if (true) {
-//                    if ((mPricePercent > lowPercent) || (mAskPriceRange < highPercent)) {
+                    if ((mPricePercent > lowPercent) ||
+                            (mAskPriceRange < highPercent) ||
+                            mCoinType.equals(AutoBotControl.XRP) ||
+                            mCoinType.equals(AutoBotControl.IOTA)) {
                         for (long i = mBuyPriceMin; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
                             /**
                              * bid(매수)에 가격이 없으므로 매수에 걸어야함
@@ -296,6 +302,10 @@ public class TradeRunner {
                         callCancelLimit(cancelOrder);
                         break;
                     }
+                }
+
+                if (mCallCnt < LIMIT_PRIVATE_API_CALL_COUNT) {
+                    mOnNoWorkingEventListener.onNoWorkingEventListener();
                 }
             }
 

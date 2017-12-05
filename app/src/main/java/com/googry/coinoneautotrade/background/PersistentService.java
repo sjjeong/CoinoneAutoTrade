@@ -67,14 +67,14 @@ public class PersistentService extends Service {
     private void initData() {
         mCoinCycle = 0;
         mTradeRunners = new ArrayList<>();
-        mTradeRunners.add(new TradeRunner(AutoBotControl.BTC, Config.ACCESS_TOKEN, Config.SECRET_KEY));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.BCH, Config.ACCESS_TOKEN, Config.SECRET_KEY));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.ETH, Config.ACCESS_TOKEN, Config.SECRET_KEY));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.ETC, Config.ACCESS_TOKEN, Config.SECRET_KEY));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.XRP, Config.ACCESS_TOKEN, Config.SECRET_KEY));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.QTUM, Config.ACCESS_TOKEN, Config.SECRET_KEY));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.LTC, Config.ACCESS_TOKEN, Config.SECRET_KEY));
-        mTradeRunners.add(new TradeRunner(AutoBotControl.IOTA, Config.ACCESS_TOKEN, Config.SECRET_KEY));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.BTC, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.BCH, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.ETH, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.ETC, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.XRP, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.QTUM, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.LTC, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.IOTA, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
 
         countDownTimer();
         countDownTimer.start();
@@ -85,9 +85,9 @@ public class PersistentService extends Service {
         countDownTimer = new CountDownTimer(MILLISINFUTURE, COUNT_DOWN_INTERVAL) {
             public void onTick(long millisUntilFinished) {
                 for (int i = 0; i < mTradeRunners.size(); i++) {
-                    mCoinCycle = (mCoinCycle + 1) % mTradeRunners.size();
                     if(mTradeRunners.get(mCoinCycle).run())
                         break;
+                    mCoinCycle = (mCoinCycle + 1) % mTradeRunners.size();
                 }
             }
 
@@ -97,6 +97,17 @@ public class PersistentService extends Service {
             }
         };
     }
+
+    public interface OnNoWorkingEventListener{
+        void onNoWorkingEventListener();
+    }
+
+    private OnNoWorkingEventListener mOnNoWorkingEventListener = new OnNoWorkingEventListener() {
+        @Override
+        public void onNoWorkingEventListener() {
+            mCoinCycle = (mCoinCycle + 1) % mTradeRunners.size();
+        }
+    };
 
 
     /**
