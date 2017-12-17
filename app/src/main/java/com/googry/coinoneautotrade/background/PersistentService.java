@@ -75,6 +75,7 @@ public class PersistentService extends Service {
         mTradeRunners.add(new TradeRunner(AutoBotControl.QTUM, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
         mTradeRunners.add(new TradeRunner(AutoBotControl.LTC, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
         mTradeRunners.add(new TradeRunner(AutoBotControl.IOTA, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
+        mTradeRunners.add(new TradeRunner(AutoBotControl.BTG, Config.ACCESS_TOKEN, Config.SECRET_KEY, mOnNoWorkingEventListener));
 
         countDownTimer();
         countDownTimer.start();

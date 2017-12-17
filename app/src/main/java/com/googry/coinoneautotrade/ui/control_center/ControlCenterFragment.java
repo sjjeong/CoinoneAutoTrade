@@ -72,13 +72,16 @@ public class ControlCenterFragment
     }
 
     @Override
-    public void initData(long last, double holdAmount, double krw, AutoBotControl control) {
+    public void initData(long last, double holdAmount, double krw) {
         mBinding.setNowPrice(last);
         mBinding.setHoldAmount(holdAmount);
         mBinding.setAvailableKrw(krw);
+    }
+
+    @Override
+    public void initControl(AutoBotControl control){
         mBinding.setRunning(control.runFlag);
         mBinding.setControl(control);
-
     }
 
     @Override

@@ -58,6 +58,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
     @Override
     public void start() {
         callTicker();
+        mView.initControl(mAutoBotControl);
     }
 
     private void callTicker() {
@@ -123,8 +124,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
                 mView.initData(
                         last,
                         balance,
-                        mCoinoneBalance.balanceKrw.avail,
-                        mAutoBotControl);
+                        mCoinoneBalance.balanceKrw.avail);
 
             }
 

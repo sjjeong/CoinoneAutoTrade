@@ -27,8 +27,9 @@ public interface ControlCenterContract {
     interface View extends BaseView<Presenter> {
         void initData(long last,
                       double holdAmount,
-                      double krw,
-                      AutoBotControl control);
+                      double krw);
+
+        void initControl(AutoBotControl control);
 
         void showRunning(boolean isRun);
 

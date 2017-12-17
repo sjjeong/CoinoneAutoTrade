@@ -21,6 +21,7 @@ public class AutoBotControl extends RealmObject {
     public static final String QTUM = "qtum";
     public static final String LTC = "ltc";
     public static final String IOTA = "iota";
+    public static final String BTG = "btg";
     @PrimaryKey
     public String coinType;
 
@@ -64,74 +65,83 @@ public class AutoBotControl extends RealmObject {
         switch (coinType) {
             case BTC:{
                 pricePercent = 1.05f;
-                askPriceRange = 1.15f;
-                bidPriceRange = 0.975f;
-                buyAmount = Double.valueOf("0.0015");
-                sellAmount = Double.valueOf("0.0014");
-                divideUnit = 100000;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.95f;
+                buyAmount = Double.valueOf("0.0001");
+                sellAmount = Double.valueOf("0.0001");
+                divideUnit = 32000;
             }
             break;
             case BCH:{
                 pricePercent = 1.05f;
                 askPriceRange = 1.1f;
-                bidPriceRange = 0.975f;
-                buyAmount = Double.valueOf("0.011");
-                sellAmount = Double.valueOf("0.0109");
-                divideUnit = 500;
+                bidPriceRange = 0.95f;
+                buyAmount = Double.valueOf("0.01");
+                sellAmount = Double.valueOf("0.01");
+                divideUnit = 4000;
             }
             break;
             case ETH:{
                 pricePercent = 1.05f;
                 askPriceRange = 1.1f;
-                bidPriceRange = 0.975f;
-                buyAmount = Double.valueOf("0.011");
-                sellAmount = Double.valueOf("0.0109");
-                divideUnit = 500;
+                bidPriceRange = 0.95f;
+                buyAmount = Double.valueOf("0.01");
+                sellAmount = Double.valueOf("0.01");
+                divideUnit = 1600;
             }
             break;
             case ETC:{
                 pricePercent = 1.05f;
                 askPriceRange = 1.1f;
-                bidPriceRange = 0.975f;
-                buyAmount = Double.valueOf("0.2");
-                sellAmount = Double.valueOf("0.1998");
-                divideUnit = 10;
+                bidPriceRange = 0.95f;
+                buyAmount = Double.valueOf("0.1");
+                sellAmount = Double.valueOf("0.1");
+                divideUnit = 20;
             }
             break;
             case XRP:{
                 pricePercent = 1.05f;
                 askPriceRange = 1.1f;
-                bidPriceRange = 0.975f;
+                bidPriceRange = 0.95f;
                 buyAmount = Double.valueOf("10");
-                sellAmount = Double.valueOf("9.992");
+                sellAmount = Double.valueOf("10");
                 divideUnit = 1;
             }
             break;
             case QTUM:{
                 pricePercent = 1.05f;
                 askPriceRange = 1.1f;
-                bidPriceRange = 0.975f;
-                buyAmount = Double.valueOf("0.2");
-                sellAmount = Double.valueOf("0.1998");
-                divideUnit = 10;
+                bidPriceRange = 0.95f;
+                buyAmount = Double.valueOf("0.1");
+                sellAmount = Double.valueOf("0.1");
+                divideUnit = 20;
             }
             break;
             case LTC:{
                 pricePercent = 1.05f;
                 askPriceRange = 1.1f;
-                bidPriceRange = 0.975f;
-                buyAmount = Double.valueOf("0.11");
-                sellAmount = Double.valueOf("0.1099");
-                divideUnit = 500;
+                bidPriceRange = 0.95f;
+                buyAmount = Double.valueOf("0.1");
+                sellAmount = Double.valueOf("0.1");
+                divideUnit = 1600;
             }
             break;
             case IOTA:{
                 pricePercent = 1.05f;
                 askPriceRange = 1.1f;
-                bidPriceRange = 0.975f;
-                buyAmount = Double.valueOf("1");
-                sellAmount = Double.valueOf("1");
-                divideUnit = 1;
+                bidPriceRange = 0.95f;
+                buyAmount = Double.valueOf("2");
+                sellAmount = Double.valueOf("2");
+                divideUnit = 10;
+            }
+            break;
+            case BTG:{
+                pricePercent = 1.05f;
+                askPriceRange = 1.1f;
+                bidPriceRange = 0.95f;
+                buyAmount = Double.valueOf("0.01");
+                sellAmount = Double.valueOf("0.01");
+                divideUnit = 1600;
             }
             break;
         }

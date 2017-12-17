@@ -3,6 +3,7 @@ package com.googry.coinoneautotrade.background;
 import com.googry.coinoneautotrade.data.CoinoneBalance;
 import com.googry.coinoneautotrade.data.CoinoneLimitOrder;
 import com.googry.coinoneautotrade.data.CoinoneTicker;
+import com.googry.coinoneautotrade.data.CommonBalance;
 import com.googry.coinoneautotrade.data.Order;
 import com.googry.coinoneautotrade.data.realm.AutoBotControl;
 import com.googry.coinoneautotrade.data.remote.CoinoneApiManager;
@@ -38,8 +39,8 @@ public class TradeRunner {
     private long mLastPrice;
     private CoinoneTicker.Ticker mTicker;
 
-    private CoinoneBalance.Balance mBalance;
-    private CoinoneBalance.Balance mBalanceKrw;
+    private CommonBalance mBalance;
+    private CommonBalance mBalanceKrw;
 
     private CoinoneApiManager.CoinonePrivateApi mPrivateApi;
     private CoinoneApiManager.CoinonePublicApi mPublicApi;
@@ -256,10 +257,10 @@ public class TradeRunner {
                 LogUtil.e(String.format("%s\t\t%s", mPricePercent > lowPercent, mAskPriceRange < highPercent));
 
                 if (mBalance.avail < mSellAmount) {
-                    if ((mPricePercent > lowPercent) ||
-                            (mAskPriceRange < highPercent) ||
-                            mCoinType.equals(AutoBotControl.XRP) ||
-                            mCoinType.equals(AutoBotControl.IOTA)) {
+                    if ((mPricePercent > lowPercent)
+                            || (mAskPriceRange < highPercent)
+//                            || mCoinType.equals(AutoBotControl.XRP)
+                            /*|| mCoinType.equals(AutoBotControl.IOTA)*/) {
                         for (long i = mBuyPriceMin; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
                             /**
                              * bid(매수)에 가격이 없으므로 매수에 걸어야함
@@ -300,7 +301,7 @@ public class TradeRunner {
                 for (Order cancelOrder : mBidOrders) {
                     if (cancelOrder.price < lowPrice) {
                         callCancelLimit(cancelOrder);
-                        break;
+//                        break;
                     }
                 }
 
