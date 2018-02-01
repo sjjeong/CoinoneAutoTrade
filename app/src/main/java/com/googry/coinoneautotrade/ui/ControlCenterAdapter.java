@@ -9,10 +9,8 @@ import android.view.ViewGroup;
 
 import com.googry.coinoneautotrade.R;
 import com.googry.coinoneautotrade.data.CommonBalance;
-import com.googry.coinoneautotrade.data.realm.AutoBotControl;
 import com.googry.coinoneautotrade.databinding.CoinCardItemBinding;
 import com.googry.coinoneautotrade.ui.control_center.ControlCenterActivity;
-import com.googry.coinoneautotrade.util.LogUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,12 +58,15 @@ public class ControlCenterAdapter extends RecyclerView.Adapter<ControlCenterAdap
         }
 
         public void onItemClick() {
-            mBinding.getRoot().getContext()
-                    .startActivity(new Intent(
-                            mBinding.getRoot().getContext(),
-                            ControlCenterActivity.class)
-                            .putExtra(ControlCenterActivity.EXTRA_COIN_TYPE,
-                                    mBinding.getBalance().coinName));
+            if (!mBinding.getBalance().coinName.toUpperCase().equals("KRW")) {
+                mBinding.getRoot().getContext()
+                        .startActivity(new Intent(
+                                mBinding.getRoot().getContext(),
+                                ControlCenterActivity.class)
+                                .putExtra(ControlCenterActivity.EXTRA_COIN_TYPE,
+                                        mBinding.getBalance().coinName));
+            }
+
         }
     }
 

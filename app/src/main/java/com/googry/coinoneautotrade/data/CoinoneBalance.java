@@ -12,6 +12,8 @@ import java.util.List;
 public class CoinoneBalance implements IBalance{
     @SerializedName("btc")
     public CommonBalance balanceBtc;
+    @SerializedName("bch")
+    public CommonBalance balanceBch;
     @SerializedName("eth")
     public CommonBalance balanceEth;
     @SerializedName("etc")
@@ -20,8 +22,6 @@ public class CoinoneBalance implements IBalance{
     public CommonBalance balanceXrp;
     @SerializedName("qtum")
     public CommonBalance balanceQtum;
-    @SerializedName("bch")
-    public CommonBalance balanceBch;
     @SerializedName("ltc")
     public CommonBalance balanceLtc;
     @SerializedName("iota")
@@ -39,6 +39,10 @@ public class CoinoneBalance implements IBalance{
             balanceBtc.coinName = "btc";
             balances.add(balanceBtc);
         }
+        if(balanceBch != null) {
+            balanceBch.coinName = "bch";
+            balances.add(balanceBch);
+        }
         if(balanceEth != null) {
             balanceEth.coinName = "eth";
             balances.add(balanceEth);
@@ -54,10 +58,6 @@ public class CoinoneBalance implements IBalance{
         if(balanceQtum != null) {
             balanceQtum.coinName = "qtum";
             balances.add(balanceQtum);
-        }
-        if(balanceBch != null) {
-            balanceBch.coinName = "bch";
-            balances.add(balanceBch);
         }
         if(balanceLtc != null) {
             balanceLtc.coinName = "ltc";

@@ -255,7 +255,7 @@ public class ControlCenterPresenter implements ControlCenterContract.Presenter {
                                 encryptlimitOrdersPayload, limitOrdersSignature, encryptlimitOrdersPayload
                         );
                         call.execute();
-                        Thread.sleep(500);
+                        Thread.sleep(300);
                     } catch (InterruptedException | IOException e) {
                         e.printStackTrace();
                     }

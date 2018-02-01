@@ -25,6 +25,8 @@ import retrofit2.Response;
 public class TradeRunner {
 
     private static final int LIMIT_PRIVATE_API_CALL_COUNT = 5;
+    private static final int ASK = 1;
+    private static final int BID = 0;
 
     private String mCoinType;
     private int mCallCnt;
@@ -53,6 +55,7 @@ public class TradeRunner {
      */
     private ArrayList<Long> mAsks = new ArrayList<>();
     private ArrayList<Long> mBids = new ArrayList<>();
+    private ArrayList<Order> mAskOrders = new ArrayList<>();
     private ArrayList<Order> mBidOrders = new ArrayList<>();
 
     private Realm mRealm;
@@ -175,6 +178,10 @@ public class TradeRunner {
                         mBalance = coinoneBalance.balanceIota;
                     }
                     break;
+                    case AutoBotControl.BTG: {
+                        mBalance = coinoneBalance.balanceBtg;
+                    }
+                    break;
                 }
                 mBalanceKrw = coinoneBalance.balanceKrw;
                 if (mBalance == null) {
@@ -233,9 +240,10 @@ public class TradeRunner {
                 for (Order order : limitOrder.limitOrders) {
                     if (order.type.equals("ask")) {
                         mAsks.add(order.price);
+                        mAskOrders.add(order);
                     } else {
                         if (mBids.contains(order.price)) {
-                            callCancelLimit(order);
+                            callCancelLimit(order, BID);
                             continue;
                         }
                         mBids.add(order.price);
@@ -253,30 +261,28 @@ public class TradeRunner {
                 double highPercent = (mTicker.high) / (double) mTicker.last;
 
                 LogUtil.e(String.format("low %.2f\t high %.2f", lowPercent, highPercent));
-                LogUtil.e(String.format("buy %.2f\t  ask %.2f", mPricePercent, mAskPriceRange));
-                LogUtil.e(String.format("%s\t\t%s", mPricePercent > lowPercent, mAskPriceRange < highPercent));
+//                LogUtil.e(String.format("buy %.2f\t  ask %.2f", mPricePercent, mAskPriceRange));
+//                LogUtil.e(String.format("%s\t\t%s", 1.15f > lowPercent, 1.15f < highPercent));
 
                 if (mBalance.avail < mSellAmount) {
-                    if ((mPricePercent > lowPercent)
-                            || (mAskPriceRange < highPercent)
-//                            || mCoinType.equals(AutoBotControl.XRP)
-                            /*|| mCoinType.equals(AutoBotControl.IOTA)*/) {
-                        for (long i = mBuyPriceMin; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
-                            /**
-                             * bid(매수)에 가격이 없으므로 매수에 걸어야함
-                             */
-                            if (!mBids.contains(i)) {
-                                long price = (long) (Math.ceil(((float) i) * mPricePercent / divideUnit) * divideUnit);
-                                if (!mAsks.contains(price) && krwAvail >= price * mBuyAmount) {
-                                    /**
-                                     * 매수를 price로 요청
-                                     */
-                                    krwAvail -= price * mBuyAmount;
-                                    callBuyLimit(i, mBuyAmount);
-                                }
+//                    if ((1.15f > lowPercent)
+//                            || (1.15f < highPercent)) {
+                    for (long i = mBuyPriceMin; i <= (long) (mLastPrice - divideUnit); i = (long) (i + divideUnit)) {
+                        /**
+                         * bid(매수)에 가격이 없으므로 매수에 걸어야함
+                         */
+                        if (!mBids.contains(i)) {
+                            long price = (long) (Math.ceil(((float) i) * mPricePercent / divideUnit) * divideUnit);
+                            if (!mAsks.contains(price) && krwAvail >= price * mBuyAmount) {
+                                /**
+                                 * 매수를 price로 요청
+                                 */
+                                krwAvail -= price * mBuyAmount;
+                                callBuyLimit(i, mBuyAmount);
                             }
                         }
                     }
+//                    }
                 } else {
                     /**
                      * Ticker.last +
@@ -299,9 +305,15 @@ public class TradeRunner {
                 }
                 int lowPrice = (int) (Math.round(((float) mLastPrice) * Math.pow(mBidPriceRange, 2) / divideUnit) * divideUnit);
                 for (Order cancelOrder : mBidOrders) {
-                    if (cancelOrder.price < lowPrice) {
-                        callCancelLimit(cancelOrder);
-//                        break;
+                    if (cancelOrder.price < lowPrice || cancelOrder.price % divideUnit != 0 || cancelOrder.qty != mBuyAmount) {
+                        callCancelLimit(cancelOrder, BID);
+                        break;
+                    }
+                }
+                for (Order askOrder : mAskOrders) {
+                    if (askOrder.price > mLastPrice * 2) {
+                        callCancelLimit(askOrder, ASK);
+                        break;
                     }
                 }
 
@@ -371,7 +383,7 @@ public class TradeRunner {
 
     }
 
-    private void callCancelLimit(final Order cancelOrder) {
+    private void callCancelLimit(final Order cancelOrder, int isAsk) {
         if (mCallCnt >= LIMIT_PRIVATE_API_CALL_COUNT)
             return;
         mCallCnt++;
@@ -381,7 +393,7 @@ public class TradeRunner {
                 cancelOrder.orderId,
                 cancelOrder.price,
                 cancelOrder.qty,
-                0,
+                isAsk,
                 mCoinType,
                 System.currentTimeMillis());
         String encryptlimitOrdersPayload = EncryptionUtil.getEncyptPayload(limitOrdersPayload);
