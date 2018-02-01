@@ -55,7 +55,6 @@ public class TradeRunner {
      */
     private ArrayList<Long> mAsks = new ArrayList<>();
     private ArrayList<Long> mBids = new ArrayList<>();
-    private ArrayList<Order> mAskOrders = new ArrayList<>();
     private ArrayList<Order> mBidOrders = new ArrayList<>();
 
     private Realm mRealm;
@@ -239,8 +238,11 @@ public class TradeRunner {
 
                 for (Order order : limitOrder.limitOrders) {
                     if (order.type.equals("ask")) {
+                        if (order.price > mLastPrice * 2) {
+                            callCancelLimit(order, ASK);
+                            continue;
+                        }
                         mAsks.add(order.price);
-                        mAskOrders.add(order);
                     } else {
                         if (mBids.contains(order.price)) {
                             callCancelLimit(order, BID);
@@ -307,12 +309,6 @@ public class TradeRunner {
                 for (Order cancelOrder : mBidOrders) {
                     if (cancelOrder.price < lowPrice || cancelOrder.price % divideUnit != 0 || cancelOrder.qty != mBuyAmount) {
                         callCancelLimit(cancelOrder, BID);
-                        break;
-                    }
-                }
-                for (Order askOrder : mAskOrders) {
-                    if (askOrder.price > mLastPrice * 2) {
-                        callCancelLimit(askOrder, ASK);
                         break;
                     }
                 }
