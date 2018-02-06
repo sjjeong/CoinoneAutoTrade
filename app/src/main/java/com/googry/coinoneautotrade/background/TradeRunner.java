@@ -294,7 +294,15 @@ public class TradeRunner {
                     for (long i = mSellPriceMax; i >= (long) (mLastPrice + divideUnit); i = (long) (i - divideUnit)) {
                         if (!mAsks.contains(i)) {
                             long price = (long) (Math.ceil(((float) i) / mPricePercent / divideUnit) * divideUnit);
-                            if (!mBids.contains(price) && coinAvail >= mSellAmount) {
+                            if (mBids.contains(price)) {
+                                for (Order bidOrder : mBidOrders) {
+                                    if (bidOrder.price == price) {
+                                        callCancelLimit(bidOrder, BID);
+                                        break;
+                                    }
+                                }
+                            }
+                            if (coinAvail >= mSellAmount) {
                                 /**
                                  * 매도에 걸어둘꺼니까 매수하지 말라고 추가함
                                  */
